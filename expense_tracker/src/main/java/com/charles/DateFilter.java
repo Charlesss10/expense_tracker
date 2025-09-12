@@ -1,15 +1,18 @@
 package com.charles;
 
-import java.sql.SQLException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 //Filter transaction by date
 public class DateFilter implements FilterStrategy {
     @Override
-    public void filter(double amountFilterStart, double amountFilterEnd, java.util.Date dateFilterStart,
-            java.util.Date dateFilterEnd, String categoryFilter, String sourceFilter,
-            TransactionManager transactionManager) throws SQLException {
-        transactionManager.getRecentTransactions(amountFilterStart, amountFilterEnd, dateFilterStart, dateFilterEnd,
-                categoryFilter,
-                sourceFilter);
+    public List<Transaction> filter(
+            Double amountFilterStart, Double amountFilterEnd,
+            java.util.Date dateFilterStart, java.util.Date dateFilterEnd,
+            String categoryFilter, String sourceFilter,
+            List<Transaction> transactions) {
+        return transactions.stream()
+                .filter(t -> t.getDate().compareTo(dateFilterStart) >= 0 && t.getDate().compareTo(dateFilterEnd) <= 0)
+                .collect(Collectors.toList());
     }
 }

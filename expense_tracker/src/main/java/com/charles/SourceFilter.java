@@ -1,17 +1,19 @@
 package com.charles;
 
-import java.sql.SQLException;
-import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 //Filter by source
 public class SourceFilter implements FilterStrategy {
 
     @Override
-    public void filter(double amountFilterStart, double amountFilterEnd, Date dateFilterStart,
-            Date dateFilterEnd,
-            String categoryFilter, String sourceFilter, TransactionManager transactionManager) throws SQLException {
-        transactionManager.getRecentTransactions(amountFilterStart, amountFilterEnd, dateFilterStart, dateFilterEnd,
-                categoryFilter,
-                sourceFilter);
+    public List<Transaction> filter(
+            Double amountFilterStart, Double amountFilterEnd,
+            java.util.Date dateFilterStart, java.util.Date dateFilterEnd,
+            String categoryFilter, String sourceFilter,
+            List<Transaction> transactions) {
+        return transactions.stream()
+                .filter(t -> "INCOME".equalsIgnoreCase(t.getType()) && t.getSource().equalsIgnoreCase(sourceFilter))
+                .collect(Collectors.toList());
     }
 }

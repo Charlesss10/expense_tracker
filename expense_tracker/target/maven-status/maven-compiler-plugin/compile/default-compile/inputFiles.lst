@@ -1,14 +1,39 @@
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\DateFilter.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\CategoryFilter.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\AmountFilter.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\UserInterface.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\Transaction.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\FilterStrategy.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\UserAccount.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\UserAccountManager.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\Management.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\AuthManager.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\Database.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\App.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\TransactionManager.java
-C:\Users\charles\Documents\Programming\Personal Projects - GitHub\expense-tracker\expense_tracker\src\main\java\com\charles\SourceFilter.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Management.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\UserInterface.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\LoginRequest.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\AuthManager.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ExpenseSummaryController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\UserAccountManager.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\UserAccount.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\App.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\MonthlyReport.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\TransactionController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Database.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\TransactionRequest.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\UserAccountDTO.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\FilterStrategy.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\SourceFilter.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Observer.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\LoginResponse.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\BalanceResponse.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\TransactionList.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\AmountFilter.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\CategoryFilter.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\SettingsController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ExpenseSummary.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ReportSummary.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\CurrencyRequest.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\UserAccountController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ReportStrategy.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Settings.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Subject.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\Transaction.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\AuthController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\YearlyReport.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ExpenseTrackerApplication.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\TransactionManager.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\DateFilter.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ReportController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\DataStorage.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\DataStorageController.java
+C:\Users\charles\Documents\Coding\charlestech_solutions\projects\software_dev\expense_tracker\expense_tracker\src\main\java\com\charles\ResetPasswordRequest.java

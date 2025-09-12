@@ -10,9 +10,9 @@ public interface UserInterface {
 
 	public void transactionManager(String transactionManagerPrompt) throws ClassNotFoundException, SQLException, IOException;
 
-	public void settings();
+	public void settings() throws SQLException;
 
-	public void dataStorage();
+	public void dataStorage() throws SQLException;
 
 	public void run() throws ClassNotFoundException, SQLException, IOException;
 }

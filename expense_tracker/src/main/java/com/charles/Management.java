@@ -3,15 +3,12 @@ package com.charles;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.Year;
 import java.time.YearMonth;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.UUID;
 
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -20,25 +17,26 @@ public class Management implements UserInterface {
 	private final UserAccountManager userAccountManager;
 	private final AuthManager authManager;
 	private final TransactionManager transactionManager;
-	private final TransactionHistory transactionHistory;
 	private final ExpenseSummary expenseSummary;
 	private final ReportSummary reportSummary;
 	private final Settings settings;
 	private final DataStorage dataStorage;
+	private final Database database;
+	private final String TOKEN_FILE = "./expense_tracker/auth_token.txt";
 	Scanner choice = new Scanner(System.in);
 
 	public Management(UserAccountManager userAccountManager, AuthManager authManager,
-			TransactionManager transactionManager, TransactionHistory transactionHistory, ExpenseSummary expenseSummary,
-			ReportSummary reportSummary, Settings settings, DataStorage dataStorage)
+			TransactionManager transactionManager, ExpenseSummary expenseSummary,
+			ReportSummary reportSummary, Settings settings, DataStorage dataStorage, Database database)
 			throws SQLException {
 		this.userAccountManager = userAccountManager;
 		this.authManager = authManager;
 		this.transactionManager = transactionManager;
-		this.transactionHistory = transactionHistory;
 		this.expenseSummary = expenseSummary;
 		this.reportSummary = reportSummary;
 		this.settings = settings;
 		this.dataStorage = dataStorage;
+		this.database = database;
 	}
 
 	@Override
@@ -51,6 +49,10 @@ public class Management implements UserInterface {
 		Date birthday = null;
 		String password;
 		String email = null;
+		Map<String, String> currencies = new HashMap<>();
+		currencies.put("A", "Euro");
+		currencies.put("B", "Dollar");
+		String preferredCurrency = null;
 
 		// Validate user input
 		while (!userAccountManagerPrompt.equalsIgnoreCase("ADD") &&
@@ -88,30 +90,30 @@ public class Management implements UserInterface {
 				}
 
 				// Select currency
-				while (settings.getPreferredCurrency() == null) {
-					System.out.println("Select Currency");
-					System.out.println("---------------");
+				System.out.println("Select Currency");
+				System.out.println("---------------");
 
-					for (Map.Entry<String, String> currency : settings.getCurrencies().entrySet()) {
-						System.out.println(currency.getKey() + " - " + currency.getValue());
-					}
+				for (Map.Entry<String, String> currency : currencies.entrySet()) {
+					System.out.println(currency.getKey() + " - " + currency.getValue());
+				}
+				currencyChoice = choice.nextLine();
+
+				// Validate user input
+				while (!currencyChoice.equalsIgnoreCase("A") &&
+						!currencyChoice.equalsIgnoreCase("B")) {
+					System.out.println("Wrong option. Retry: ");
 					currencyChoice = choice.nextLine();
+				}
+				currencyChoice = currencyChoice.toUpperCase();
 
-					// Validate user input
-					while (!currencyChoice.equalsIgnoreCase("A") &&
-							!currencyChoice.equalsIgnoreCase("B")) {
-						System.out.println("Wrong option. Retry: ");
-						currencyChoice = choice.nextLine();
-					}
-					currencyChoice = currencyChoice.toUpperCase();
-
-					// Set currency
-					try {
-						settings.setCurrency(currencyChoice);
-					} catch (Exception e) {
+				// Set currency
+				for (Map.Entry<String, String> currency : currencies.entrySet()) {
+					if (currencyChoice.equalsIgnoreCase(currency.getKey())) {
+						preferredCurrency = currency.getValue();
 					}
 				}
 
+				// Set Email
 				do {
 					System.out.println("Email: ");
 					email = choice.nextLine();
@@ -120,6 +122,7 @@ public class Management implements UserInterface {
 					}
 				} while (!email.matches("^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$"));
 
+				// Set Password
 				do {
 					System.out.println("Password: ");
 					password = choice.nextLine();
@@ -128,17 +131,18 @@ public class Management implements UserInterface {
 								"Invalid password format. The password must be at least 5 characters long, contain both alphanumeric characters and at least one special character.");
 					}
 				} while (password.length() < 5 || !password.matches(".*[0-9\\W].*"));
-				String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
-				userAccount = new UserAccount(firstName, lastName, username, birthday, hashedPassword, email,
-						settings.getPreferredCurrency());
-				userAccountManager.addAccount(userAccount);
-				return true;
+				userAccount = new UserAccount(firstName, lastName, username, birthday, password, email,
+						preferredCurrency);
+				if (userAccountManager.addAccount(userAccount)) {
+					return true;
+				} else {
+					System.out.println("Unable to add User Account");
+				}
 			}
 			case "MODIFY" -> {
 				String modifyChoice;
 				String continueModifyChoice;
-				String hashedPassword;
 
 				int userAccountId = authManager.getAccountId();
 				userAccount = userAccountManager.getUserAccount(userAccountId);
@@ -211,10 +215,10 @@ public class Management implements UserInterface {
 											"Invalid password format. The password must be at least 5 characters long, contain both alphanumeric characters and at least one special character.");
 								}
 							} while (password.length() < 5 || !password.matches(".*[0-9\\W].*"));
-							hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
-							userAccount.setPassword(hashedPassword);
+
+							userAccount.setPassword(password);
 							try {
-								authManager.terminateSession();
+								authManager.terminateSession(authManager.getToken(), authManager.getAccountId(), TOKEN_FILE);
 							} catch (IOException ex) {
 							}
 							break;
@@ -260,57 +264,50 @@ public class Management implements UserInterface {
 		switch (authManagerPrompt) {
 			// Login to the Expense Tracker App
 			case "LOGIN" -> {
-				int loginAttempts = 0;
-				String username;
-				String password;
-
 				// Load token
-				String token = authManager.loadSessionToken();
+				String token = authManager.loadSessionToken(TOKEN_FILE);
 				if (token != null) {
-					String accountId = authManager.validateSessionToken(token);
-					if (accountId != null) {
-						authManager.setAccountId(Integer.parseInt(accountId));
-						settings.setAccountCurrency();
-						System.out.println("Welcome back, user " + accountId + "!");
+					String accountIdStr = authManager.validateSessionToken(token);
+					if (accountIdStr != null) {
+						int accountId = Integer.parseInt(accountIdStr);
+						authManager.setAccountId(accountId);
+						System.out.println("Welcome back, "
+								+ userAccountManager.getUserAccount(accountId).getFirstName() + "!");
+						authManager.setToken(token);
 						return true;
 					} else {
 						System.out.println("Session expired or invalid. Please log in again.");
 					}
+				} else {
+					int loginAttempts = 0;
+					String username;
+					String password;
+					System.out.println("Login");
+					System.out.println("-----");
+					do {
+						System.out.println("Username: ");
+						username = choice.nextLine();
+
+						System.out.println("Password: ");
+						password = choice.nextLine();
+
+						token = authManager.login(username, password, TOKEN_FILE);
+
+						if (token != null) {
+							return true;
+						}
+
+						loginAttempts++;
+
+					} while (loginAttempts < 3);
+					authManager.setFailedLoginAttempts(loginAttempts);
+					System.out.println("Login failed. Please try again later.");
 				}
-
-				System.out.println("Login");
-				System.out.println("-----");
-
-				do {
-					System.out.println("Username: ");
-					username = choice.nextLine();
-
-					System.out.println("Password: ");
-					password = choice.nextLine();
-
-					if (authManager.login(username, password)) {
-						// Generate and save token if login succeeds
-						int accountId = authManager.getAccountId();
-						token = authManager.generateSessionToken(accountId);
-						// Set sessionId
-						String sessionId = UUID.randomUUID().toString();
-						authManager.saveSession(token, sessionId, accountId);
-						// Set currency
-						settings.setAccountCurrency();
-						System.out.println("Login successful.");
-						return true;
-					}
-					loginAttempts++;
-
-				} while (loginAttempts < 3);
-
-				authManager.setFailedLoginAttempts(loginAttempts);
-				System.out.println("Login failed. Please try again later.");
 				break;
 			}
 
 			case "LOGOUT" -> {
-				return authManager.logout();
+				return authManager.logout(authManager.getToken(), authManager.getAccountId(), TOKEN_FILE);
 			}
 
 			case "RESET" -> {
@@ -333,7 +330,7 @@ public class Management implements UserInterface {
 					}
 				} while (!email.matches("^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$"));
 
-				if (authManager.resetPassword(email)) {
+				if (authManager.validateEmail(email)) {
 					int passwordAttempts = 0;
 					System.out.println("New Password");
 					System.out.println("------------");
@@ -353,7 +350,7 @@ public class Management implements UserInterface {
 					String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
 					if (password.length() > 5 || password.matches(".*[0-9\\W].*")) {
-						return authManager.updateAccountPassword(email, hashedPassword);
+						return authManager.resetPassword(email, hashedPassword);
 					}
 				}
 				break;
@@ -364,7 +361,6 @@ public class Management implements UserInterface {
 				return false;
 			}
 		}
-		System.out.println("Password format Incorrect.");
 		System.out.println("You have been exited from the application.");
 		return false;
 	}
@@ -372,9 +368,7 @@ public class Management implements UserInterface {
 	@Override
 	public void transactionManager(String transactionManagerPrompt)
 			throws ClassNotFoundException, SQLException, IOException {
-		transactionManager.fetchTransactions();
-		expenseSummary.fetchTransactions();
-		transactionHistory.fetchTransactions();
+		transactionManager.fetchTransactions(authManager.getAccountId());
 		String continueChoice;
 		String transactionChoice;
 
@@ -616,7 +610,8 @@ public class Management implements UserInterface {
 
 							System.out.println("Enter TransactionId: ");
 							transactionId = choice.nextLine();
-							transaction = transactionManager.getTransaction(transactionId, type);
+							transaction = transactionManager.getTransaction(transactionId, type,
+									authManager.getAccountId());
 
 							if (transaction == null) {
 								break;
@@ -712,11 +707,12 @@ public class Management implements UserInterface {
 										break;
 									}
 								}
-								boolean result = transactionManager.editTransaction(transaction);
+								boolean result = transactionManager.editTransaction(transaction,
+										authManager.getAccountId());
 								if (!result) {
 									break;
 								}
-								transactionManager.getTransaction(transactionId, type);
+								transactionManager.getTransaction(transactionId, type, authManager.getAccountId());
 								choice.nextLine();
 								System.out.println("Would you like to modify any other attribute Y/N: ");
 								continueModifyChoice = choice.nextLine();
@@ -733,7 +729,8 @@ public class Management implements UserInterface {
 							System.out.println("Enter TransactionId: ");
 							transactionId = choice.nextLine();
 
-							transaction = transactionManager.getTransaction(transactionId, type);
+							transaction = transactionManager.getTransaction(transactionId, type,
+									authManager.getAccountId());
 							choice.nextLine();
 
 							if (transaction == null) {
@@ -828,8 +825,9 @@ public class Management implements UserInterface {
 										break;
 									}
 								}
-								transactionManager.editTransaction(transaction);
-								if (transactionManager.getTransaction(transactionId, type) == null) {
+								transactionManager.editTransaction(transaction, authManager.getAccountId());
+								if (transactionManager.getTransaction(transactionId, type,
+										authManager.getAccountId()) == null) {
 									break;
 								}
 								choice.nextLine();
@@ -875,7 +873,8 @@ public class Management implements UserInterface {
 							System.out.println("Enter TransactionId: ");
 							transactionId = choice.nextLine();
 
-							transaction = transactionManager.getTransaction(transactionId, type);
+							transaction = transactionManager.getTransaction(transactionId, type,
+									authManager.getAccountId());
 							choice.nextLine();
 
 							if (transaction == null) {
@@ -887,7 +886,8 @@ public class Management implements UserInterface {
 							deleteConfirmation = choice.nextLine();
 
 							if (deleteConfirmation.equalsIgnoreCase("Y")) {
-								transactionManager.deleteTransaction(transaction);
+								transactionManager.deleteTransaction(transaction.getTransactionId(),
+										transaction.getAccountId());
 							}
 							break;
 						}
@@ -900,7 +900,8 @@ public class Management implements UserInterface {
 							System.out.println("Enter TransactionId: ");
 							transactionId = choice.nextLine();
 
-							transaction = transactionManager.getTransaction(transactionId, type);
+							transaction = transactionManager.getTransaction(transactionId, type,
+									authManager.getAccountId());
 							choice.nextLine();
 
 							if (transaction == null) {
@@ -912,7 +913,8 @@ public class Management implements UserInterface {
 							deleteConfirmation = choice.nextLine();
 
 							if (deleteConfirmation.equalsIgnoreCase("Y")) {
-								transactionManager.deleteTransaction(transaction);
+								transactionManager.deleteTransaction(transaction.getTransactionId(),
+										transaction.getAccountId());
 							}
 							break;
 						}
@@ -925,168 +927,88 @@ public class Management implements UserInterface {
 
 			// View total balance
 			case "TOTALBALANCE" -> {
-				transactionManager.getTotalBalance();
+				System.out.println("\nTOTAL BALANCE");
+				System.out.println("-------------");
+
+				this.transactionManager.getTotalBalance(authManager.getAccountId());
+				System.out.println(
+						"Total Balance: " + this.transactionManager.getTotalBalance(authManager.getAccountId()) + " "
+								+ settings.getAccountCurrency(authManager.getAccountId()));
+				System.out.println("Total Income: " + this.transactionManager.getTotalIncome() + " "
+						+ settings.getAccountCurrency(authManager.getAccountId()));
+				System.out.println("Total Expenses: " + this.transactionManager.getTotalExpenses() + " "
+						+ settings.getAccountCurrency(authManager.getAccountId()));
+
 				choice.nextLine();
 				break;
 			}
 
 			// Display recent transactions with filtering functionalities
 			case "RECENTTRANSACTIONS" -> {
-				String filterChoice;
-				String continueFilterChoice;
-				String filterCriteria;
-				double amountFilterStart = 0.0;
-				double amountFilterEnd = 0.0;
-				Date dateFilterStart = Date.valueOf(LocalDate.now().minus(30, ChronoUnit.DAYS));
-				Date dateFilterEnd = Date.valueOf(LocalDate.now());
-				String categoryFilter = null;
-				String sourceFilter = null;
+				int accountId = authManager.getAccountId();
+				List<Transaction> transactions = transactionManager.getRecentTransactions(accountId);
 
-				System.out.println("\nRecent Transactions:\n");
+				System.out.println("\nRecent Transactions:");
+				transactions.forEach(System.out::println);
 
-				if (transactionManager.getRecentTransactions(amountFilterStart, amountFilterEnd, dateFilterStart,
-						dateFilterEnd, categoryFilter, sourceFilter)) {
-					choice.nextLine();
+				System.out.println("Would you like to filter transactions? (Y/N)");
+				String filterChoice = choice.nextLine();
+				while (filterChoice.equalsIgnoreCase("Y")) {
+					System.out.println("Choose a filter criteria: ");
+					System.out.println("A - Amount");
+					System.out.println("B - Source");
+					System.out.println("C - Category");
+					System.out.println("D - Date");
+					String filterCriteria = choice.nextLine().toUpperCase();
 
-					// Option to filter transaction
-					System.out.println("Filter Transaction Y/N");
-					filterChoice = choice.nextLine();
+					FilterStrategy filterStrategy;
+					Double amountStart = null, amountEnd = null;
+					Date dateStart = null, dateEnd = null;
+					String category = null, source = null;
 
-					if (!filterChoice.equalsIgnoreCase("Y")) {
-						break;
+					switch (filterCriteria) {
+						case "A" -> {
+							filterStrategy = new AmountFilter();
+							System.out.print("Start amount: ");
+							amountStart = choice.nextDouble();
+							System.out.print("End amount: ");
+							amountEnd = choice.nextDouble();
+							choice.nextLine();
+						}
+						case "B" -> {
+							filterStrategy = new SourceFilter();
+							System.out.print("Enter Source: ");
+							source = choice.nextLine();
+						}
+						case "C" -> {
+							filterStrategy = new CategoryFilter();
+							System.out.print("Enter Category: ");
+							category = choice.nextLine();
+						}
+						case "D" -> {
+							filterStrategy = new DateFilter();
+							System.out.print("Start date (YYYY-MM-DD): ");
+							dateStart = java.sql.Date.valueOf(choice.nextLine());
+							System.out.print("End date (YYYY-MM-DD): ");
+							dateEnd = java.sql.Date.valueOf(choice.nextLine());
+						}
+						default -> {
+							System.out.println("Invalid filter criteria.");
+							continue;
+						}
 					}
 
-					do {
-						// Reset filter criterias
-						amountFilterStart = 0.0;
-						amountFilterEnd = 0.0;
-						dateFilterStart = null;
-						dateFilterEnd = null;
-						categoryFilter = null;
-						sourceFilter = null;
+					if (filterStrategy != null) {
+						List<Transaction> filtered = filterStrategy.filter(
+								amountStart, amountEnd, dateStart, dateEnd, category, source, transactions);
+						System.out.println("\nFiltered Transactions:");
+						filtered.forEach(System.out::println);
+					}
 
-						System.out.println("Choose a filter criteria: ");
-						System.out.println("A - Amount");
-						System.out.println("B - Source");
-						System.out.println("C - Category");
-						System.out.println("D - Date");
-						filterCriteria = choice.nextLine();
-
-						// Validate user input
-						while (!filterCriteria.equalsIgnoreCase("A") &&
-								!filterCriteria.equalsIgnoreCase("B") &&
-								!filterCriteria.equalsIgnoreCase("C") &&
-								!filterCriteria.equalsIgnoreCase("D")) {
-							System.out.println("Wrong option. Retry: ");
-							filterCriteria = choice.nextLine();
-						}
-						filterCriteria = filterCriteria.toUpperCase();
-
-						switch (filterCriteria) {
-							case "A" -> {
-								FilterStrategy filterStrategy = new AmountFilter();
-								while (true) {
-									System.out.println("Start amount: ");
-									try {
-										amountFilterStart = choice.nextDouble();
-										if (amountFilterStart < 0) {
-											System.out.println("Invalid input. Please enter a positive value.");
-										} else {
-											break;
-										}
-									} catch (Exception e) {
-										System.out.println("Invalid input. Please enter a valid start amount.");
-										choice.nextLine();
-									}
-								}
-								choice.nextLine();
-
-								while (true) {
-									System.out.println("End amount: ");
-									try {
-										amountFilterEnd = choice.nextDouble();
-										if (amountFilterEnd < 0) {
-											System.out.println("Invalid input. Please enter a positive value.");
-										} else {
-											break;
-										}
-									} catch (Exception e) {
-										System.out.println("Invalid input. Please enter a valid end amount.");
-										choice.nextLine();
-									}
-								}
-								choice.nextLine();
-
-								if (amountFilterEnd < amountFilterStart) {
-									double correctedAmount = amountFilterStart;
-									amountFilterStart = amountFilterEnd;
-									amountFilterEnd = correctedAmount;
-								}
-								System.out.println("Start Amount" + amountFilterStart);
-								System.out.println("End Amount" + amountFilterEnd);
-
-								filterStrategy.filter(amountFilterStart, amountFilterEnd, dateFilterStart,
-										dateFilterEnd, categoryFilter, sourceFilter, transactionManager);
-								break;
-							}
-
-							case "B" -> {
-								FilterStrategy filterStrategy = new SourceFilter();
-								System.out.println("Enter Source: ");
-								sourceFilter = choice.nextLine();
-								filterStrategy.filter(amountFilterStart, amountFilterEnd, dateFilterStart,
-										dateFilterEnd, categoryFilter, sourceFilter, transactionManager);
-								break;
-							}
-
-							case "C" -> {
-								FilterStrategy filterStrategy = new CategoryFilter();
-								System.out.println("Enter Category: ");
-								categoryFilter = choice.nextLine();
-								filterStrategy.filter(amountFilterStart, amountFilterEnd, dateFilterStart,
-										dateFilterEnd,
-										categoryFilter, sourceFilter, transactionManager);
-								break;
-							}
-							case "D" -> {
-								FilterStrategy filterStrategy = new DateFilter();
-								while (true) {
-									System.out.println("Start date(YYYY-MM-DD): ");
-									try {
-										String dateInput = choice.nextLine();
-										dateFilterStart = Date.valueOf(dateInput);
-										break;
-									} catch (Exception e) {
-										System.out.println("Invalid input. Please enter a valid start date.");
-									}
-								}
-								while (true) {
-									System.out.println("End date(YYYY-MM-DD): ");
-									try {
-										String dateInput = choice.nextLine();
-										dateFilterEnd = Date.valueOf(dateInput);
-										break;
-									} catch (Exception e) {
-										System.out.println("Invalid input. Please enter a valid end date.");
-									}
-								}
-								if (dateFilterStart != null && dateFilterEnd != null) {
-									if (dateFilterStart.compareTo(dateFilterEnd) >= 0) {
-										Date temp = dateFilterStart;
-										dateFilterStart = dateFilterEnd;
-										dateFilterEnd = temp;
-									}
-									filterStrategy.filter(amountFilterStart, amountFilterEnd, dateFilterStart,
-											dateFilterEnd, categoryFilter, sourceFilter, transactionManager);
-								}
-								break;
-							}
-						}
-						choice.nextLine();
-						System.out.println("Would you like to filter based on another criteria Y/N: ");
-						continueFilterChoice = choice.nextLine();
-					} while (continueFilterChoice.equalsIgnoreCase("Y"));
+					System.out.println("Would you like to filter based on another criteria? (Y/N)");
+					filterChoice = choice.nextLine();
 				}
+				System.out.println("Press any key to continue.");
 				choice.nextLine();
 				break;
 			}
@@ -1095,14 +1017,35 @@ public class Management implements UserInterface {
 				System.out.println("\nExpense Summary:");
 				System.out.println("----------------\n");
 
-				expenseSummary.getExpensesSummary();
+				boolean result = expenseSummary.getExpensesSummary(authManager.getAccountId());
+				if (result) {
+					System.out.println("Total Expenses: " + this.expenseSummary.getTotalExpenses() + " "
+							+ settings.getAccountCurrency(authManager.getAccountId()));
+					System.out.println("\nHighest Category: " + this.expenseSummary.getHighestCategory());
+
+					System.out.println("\nExpenses Percentage:");
+					System.out.println("--------------------");
+					for (Map.Entry<String, String> entry : this.expenseSummary.getExpensesPercentage().entrySet()) {
+						System.out.println(entry.getKey() + " - " + entry.getValue() + "%");
+					}
+
+					System.out.println("\nExpenses by Category:");
+					System.out.println("---------------------");
+					for (Map.Entry<String, String> entry : this.expenseSummary.getExpensesByCategory().entrySet()) {
+						System.out.println(entry.getKey() + " - " + entry.getValue() + " "
+								+ settings.getAccountCurrency(authManager.getAccountId()));
+					}
+				}
 				choice.nextLine();
 				break;
 			}
 
 			case "HISTORY" -> {
+				int accountId = authManager.getAccountId();
+				List<Transaction> transactions = transactionManager.getTransactions(accountId);
+
 				System.out.println("\nTransaction History: \n");
-				transactionHistory.getTransactionHistory();
+				transactions.forEach(System.out::println);
 				choice.nextLine();
 				break;
 			}
@@ -1110,7 +1053,6 @@ public class Management implements UserInterface {
 	}
 
 	public void reportSummary() throws SQLException, IOException {
-		reportSummary.fetchTransactions();
 		String reportType;
 		String continueReportChoice;
 		String exportChoice;
@@ -1149,9 +1091,49 @@ public class Management implements UserInterface {
 					}
 
 					ReportStrategy reportStrategy = new MonthlyReport();
-					boolean reportResult = reportStrategy.generateReport(targetMonth, null, this.reportSummary);
-					choice.nextLine();
+					boolean reportResult = reportStrategy.generateReport(authManager.getAccountId(), targetMonth, null,
+							this.reportSummary);
+
 					if (reportResult) {
+						System.out.println("Report Summary\n");
+						System.out.println("Total Income: " + this.reportSummary.getTotalIncome() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Expenses: " + this.reportSummary.getTotalExpenses() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Balance: " + this.reportSummary.getTotalBalance() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Highest Source: " + this.reportSummary.getHighestSource());
+						System.out.println("Highest Category: " + this.reportSummary.getHighestCategory());
+
+						if (!this.reportSummary.getIncomeBySource().isEmpty()) {
+							System.out.println("\nIncome by Source:");
+							System.out.println("-----------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getIncomeBySource().entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getIncomeBySource()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+
+						if (!this.reportSummary.getExpensesByCategory().isEmpty()) {
+							System.out.println("\nExpenses by Category:");
+							System.out.println("---------------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getExpensesByCategory()
+									.entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getExpensesByCategory()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+						choice.nextLine();
 						System.out.println("Would you like to export to .csv Y/N: ");
 						exportChoice = choice.nextLine();
 
@@ -1175,9 +1157,48 @@ public class Management implements UserInterface {
 					}
 
 					ReportStrategy reportStrategy = new YearlyReport();
-					boolean reportResult = reportStrategy.generateReport(null, targetYear, this.reportSummary);
-					choice.nextLine();
+					boolean reportResult = reportStrategy.generateReport(authManager.getAccountId(), null, targetYear,
+							this.reportSummary);
 					if (reportResult) {
+						System.out.println("Report Summary\n");
+						System.out.println("Total Income: " + this.reportSummary.getTotalIncome() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Expenses: " + this.reportSummary.getTotalExpenses() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Balance: " + this.reportSummary.getTotalBalance() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Highest Source: " + this.reportSummary.getHighestSource());
+						System.out.println("Highest Category: " + this.reportSummary.getHighestCategory());
+
+						if (!this.reportSummary.getIncomeBySource().isEmpty()) {
+							System.out.println("\nIncome by Source:");
+							System.out.println("-----------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getIncomeBySource().entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getIncomeBySource()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+
+						if (!this.reportSummary.getExpensesByCategory().isEmpty()) {
+							System.out.println("\nExpenses by Category:");
+							System.out.println("---------------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getExpensesByCategory()
+									.entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getExpensesByCategory()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+						choice.nextLine();
 						System.out.println("Would you like to export to .csv Y/N: ");
 						exportChoice = choice.nextLine();
 
@@ -1188,9 +1209,47 @@ public class Management implements UserInterface {
 					break;
 				}
 				case "C" -> {
-					boolean reportResult = reportSummary.generateReportSummary(null, null);
-					choice.nextLine();
+					boolean reportResult = reportSummary.generateReportSummary(authManager.getAccountId(), null, null);
 					if (reportResult) {
+						System.out.println("Report Summary\n");
+						System.out.println("Total Income: " + this.reportSummary.getTotalIncome() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Expenses: " + this.reportSummary.getTotalExpenses() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Total Balance: " + this.reportSummary.getTotalBalance() + " "
+								+ settings.getAccountCurrency(this.authManager.getAccountId()));
+						System.out.println("Highest Source: " + this.reportSummary.getHighestSource());
+						System.out.println("Highest Category: " + this.reportSummary.getHighestCategory());
+
+						if (!this.reportSummary.getIncomeBySource().isEmpty()) {
+							System.out.println("\nIncome by Source:");
+							System.out.println("-----------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getIncomeBySource().entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getIncomeBySource()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+
+						if (!this.reportSummary.getExpensesByCategory().isEmpty()) {
+							System.out.println("\nExpenses by Category:");
+							System.out.println("---------------------");
+							for (Map.Entry<String, String> entry : this.reportSummary.getExpensesByCategory()
+									.entrySet()) {
+								for (Map.Entry<String, String> percentage : this.reportSummary.getExpensesByCategory()
+										.entrySet()) {
+									if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
+										System.out.println(
+												entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue()
+														+ "%)");
+								}
+							}
+						}
+						choice.nextLine();
 						System.out.println("Would you like to export to .csv Y/N: ");
 						exportChoice = choice.nextLine();
 
@@ -1211,15 +1270,58 @@ public class Management implements UserInterface {
 	}
 
 	@Override
-	public void settings() {
-		System.out.println("Currency: " + settings.getPreferredCurrency());
+	public void settings() throws SQLException {
+		int accountId = authManager.getAccountId();
+		String currencyChoice;
+		Map<String, String> currencies = new HashMap<>();
+		currencies.put("A", "Euro");
+		currencies.put("B", "Dollar");
+		String newCurrency = null;
 
-		System.out.println("Press any key to continue to the main menu.");
+		System.out.println("\nSettings:");
+		System.out.println("---------\n");
+
+		System.out.println("Current Currency: " + settings.getAccountCurrency(accountId));
+		System.out.println("Would you like to change your currency? (Y/N)");
+		String changeChoice = choice.nextLine();
+
+		if (changeChoice.equalsIgnoreCase("Y")) {
+			// Select currency
+			System.out.println("Select Currency");
+			System.out.println("---------------");
+
+			for (Map.Entry<String, String> currency : currencies.entrySet()) {
+				System.out.println(currency.getKey() + " - " + currency.getValue());
+			}
+			currencyChoice = choice.nextLine();
+
+			// Validate user input
+			while (!currencyChoice.equalsIgnoreCase("A") &&
+					!currencyChoice.equalsIgnoreCase("B")) {
+				System.out.println("Wrong option. Retry: ");
+				currencyChoice = choice.nextLine();
+			}
+			currencyChoice = currencyChoice.toUpperCase();
+
+			// Set currency
+			for (Map.Entry<String, String> currency : currencies.entrySet()) {
+				if (currencyChoice.equalsIgnoreCase(currency.getKey())) {
+					newCurrency = currency.getValue();
+				}
+			}
+			boolean result = settings.changeAccountCurrency(accountId, newCurrency);
+			if (result) {
+				System.out.println("Currency updated to: " + newCurrency);
+			} else {
+				System.out.println("Currency was not updated");
+			}
+		}
+		System.out.println("\nPress any key to continue to the main menu.");
 		choice.nextLine();
 	}
 
 	@Override
-	public void dataStorage() {
+	public void dataStorage() throws SQLException {
 		String dataChoice;
 		System.out.println("A. Save Data");
 		System.out.println("B. Load Data");
@@ -1237,28 +1339,19 @@ public class Management implements UserInterface {
 			case "A" -> {
 				try {
 					try {
-						dataStorage.saveData();
+						String CSV_FILE_PATH = "./expense_tracker/transactions.csv";
+						dataStorage.saveData(CSV_FILE_PATH, authManager.getAccountId());
 					} catch (SQLException ex) {
 					}
 				} catch (IOException e) {
 				}
-
 				break;
 			}
 			case "B" -> {
 				try {
-					List<Transaction> transactions = dataStorage.loadData("transactions.csv");
-					if (transactions != null) {
-						for (Transaction transaction : transactions) {
-							try {
-								transactionManager.addTransaction(transaction, transaction.getType(),
-										authManager.getAccountId());
-								System.out.println("Added Transactions");
-							} catch (ClassNotFoundException | SQLException ex) {
-							}
-						}
-					}
-				} catch (IOException e) {
+					String CSV_FILE_PATH = "./expense_tracker/transactions.csv";
+					dataStorage.loadData(CSV_FILE_PATH, authManager.getAccountId());
+				} catch (IOException ex) {
 				}
 				break;
 			}
@@ -1293,16 +1386,22 @@ public class Management implements UserInterface {
 				break;
 			}
 			case "B" -> {
+				authManager("LOGOUT");
 				boolean passwordReset = authManager("RESET");
 				if (passwordReset) {
 					expenseTracker();
+				} else {
+					System.out.println("Unable to reset password");
 				}
 				break;
 			}
 			case "C" -> {
+				authManager("LOGOUT");
 				boolean accountCreation = userAccountManager("ADD");
 				if (accountCreation) {
 					expenseTracker();
+				} else {
+					System.out.println("Unable to create account");
 				}
 				break;
 			}
@@ -1311,12 +1410,13 @@ public class Management implements UserInterface {
 
 	public void expenseTracker() throws SQLException, ClassNotFoundException, IOException {
 		boolean login = authManager("LOGIN");
-		int failedLoginAttempts = authManager.getFailedLoginAttempts();
 
-		if (login == false && failedLoginAttempts == 3) {
+		if (login == false && authManager.getFailedLoginAttempts() == 3) {
 			boolean resetPassword = authManager("RESET");
 			if (resetPassword) {
 				expenseTracker();
+			} else {
+				System.out.println("Unable to reset password");
 			}
 		} else {
 			while (login) {
@@ -1446,17 +1546,20 @@ public class Management implements UserInterface {
 					}
 
 					case "G" -> {
-						login = authManager("LOGOUT");
+						authManager("LOGOUT");
+						login = false;
 						System.out.println("You have been logged out.");
 						break;
 					}
 
 					default -> {
-						login = authManager("LOGOUT");
+						authManager("LOGOUT");
+						login = false;
 						System.out.println("You have been logged out.");
 					}
 				}
 			}
 		}
+		database.closeConnection();
 	}
 }

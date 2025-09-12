@@ -5,22 +5,59 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class ExpenseSummary extends TransactionList {
-    private double totalExpenses = 0.0;
+    private double totalExpenses;
     private String highestCategory;
     private Map<String, String> expensesPercentage = new HashMap<>();
     private Map<String, String> expensesByCategory = new HashMap<>();
 
-    public ExpenseSummary(AuthManager authManager, Settings settings) throws SQLException {
-        super(authManager, settings);
+    public ExpenseSummary(Settings settings, TransactionManager transactionManager)
+            throws SQLException {
+        super(settings, transactionManager);
     }
 
-    public void categorizeExpenses() {
+    public boolean getExpensesSummary(int accountId) throws SQLException {
+        if (transactionManager.getTransactions(accountId) == null
+                || transactionManager.getTransactions(accountId).isEmpty()) {
+            System.out.println("No transactions available.");
+            return false;
+        }
+        this.totalExpenses = 0.0;
+        this.expensesCalculator(accountId);
+        this.categorizeExpenses(accountId);
+        return true;
+    }
+
+    public Map<String, Object> getExpensesSummaryData(int accountId) throws SQLException {
+        getExpensesSummary(accountId);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalExpenses", totalExpenses);
+        summary.put("highestCategory", highestCategory);
+        summary.put("expensesPercentage", expensesPercentage);
+        summary.put("expensesByCategory", expensesByCategory);
+        return summary;
+    }
+
+    // Helper
+    public void expensesCalculator(int accountId) throws SQLException {
+        for (Transaction transaction : transactionManager.getTransactions(accountId)) {
+            if (transaction.getType().equalsIgnoreCase("EXPENSES")) {
+                this.totalExpenses = this.totalExpenses + transaction.getAmount();
+            }
+        }
+    }
+
+    // Helper
+    public void categorizeExpenses(int accountId) throws SQLException {
         // Group by Category
         if (this.expensesByCategory != null) {
             this.expensesByCategory = new HashMap<>();
         }
-        this.expensesByCategory = totalTransactions.stream()
+        this.expensesByCategory = transactionManager.getTransactions(accountId).stream()
                 .filter(t -> t.getType().equalsIgnoreCase("EXPENSES")) // Filter only expenses
                 .collect(Collectors.groupingBy(
                         Transaction::getCategory, // Group by category
@@ -47,45 +84,25 @@ public class ExpenseSummary extends TransactionList {
         }
     }
 
-    public void getExpensesSummary() {
-        if (this.totalTransactions == null || this.totalTransactions.isEmpty()) {
-            System.out.println("No transactions available.");
-            return;
-        }
-
-        this.expensesCalculator();
-        this.categorizeExpenses();
-        System.out.println("Total Expenses: " + this.totalExpenses + " " + settings.getPreferredCurrency());
-        System.out.println("\nHighest Category: " + this.highestCategory);
-
-        System.out.println("\nExpenses Percentage:");
-        System.out.println("--------------------");
-        for (Map.Entry<String, String> entry : this.expensesPercentage.entrySet()) {
-            System.out.println(entry.getKey() + " - " + entry.getValue() + "%");
-        }
-
-        System.out.println("\nExpenses by Category:");
-        System.out.println("---------------------");
-        for (Map.Entry<String, String> entry : this.expensesByCategory.entrySet()) {
-            System.out.println(entry.getKey() + " - " + entry.getValue() + " " + settings.getPreferredCurrency());
-        }
+    // Getters
+    public double getTotalExpenses() {
+        return this.totalExpenses;
     }
 
-    public void expensesCalculator() {
-        for (Transaction transaction : this.totalTransactions) {
-            if (transaction.getType().equalsIgnoreCase("EXPENSES")) {
-                this.totalExpenses = this.totalExpenses + transaction.getAmount();
-            }
-        }
+    public String getHighestCategory() {
+        return this.highestCategory;
+    }
+
+    public Map<String, String> getExpensesPercentage() {
+        return this.expensesPercentage;
+    }
+
+    public Map<String, String> getExpensesByCategory() {
+        return this.expensesByCategory;
     }
 
     @Override
     public void update() {
-        try {
-            this.totalExpenses = 0.0;
-            fetchTransactions();
-            System.out.println("Expense Summary: Update in Transaction Manager!\n");
-        } catch (SQLException ex) {
-        }
+        System.out.println("Expense Summary: Update in Transaction Manager!\n");
     }
 }

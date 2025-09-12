@@ -41,5 +41,9 @@
   - export MYSQL_schema=expense_tracker
 - Then, reload the file: source ~/.bashrc
 
+## Springboot
+1. Run springboot on console: 
+mvn spring-boot:run
+
 ## Contributing
 Contributions are welcome! Please feel free to fork the repository, open issues, or submit pull requests.

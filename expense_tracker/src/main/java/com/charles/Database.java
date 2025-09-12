@@ -3,17 +3,18 @@ package com.charles;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 //Singleton database
 public class Database {
 	private static Database instance;
 	private final Connection con;
-	private final Statement stmt;
 
 	// Create database connection
 	private Database() throws ClassNotFoundException, SQLException {
@@ -25,8 +26,6 @@ public class Database {
 		con = DriverManager.getConnection("jdbc:mysql://" + mysql_hostname + "/" + mysql_schema, mysql_username,
 				mysql_password);
 		System.out.println("Database Connection created.\n");
-
-		stmt = con.createStatement();
 	}
 
 	// Static access point
@@ -45,15 +44,12 @@ public class Database {
 	// Close database connection
 	public void closeConnection() throws SQLException {
 		con.close();
-		stmt.close();
 		instance = null;
 		System.out.println("Database Connection closed.\n");
 	}
 
 	// Verify transaction from database
 	public boolean verifyTransaction(String transactionId, String type) throws SQLException {
-		ResultSet incomeSelectQuery, expensesSelectQuery;
-
 		// Validate transaction type
 		if (!type.equalsIgnoreCase("INCOME") && !type.equalsIgnoreCase("EXPENSES")) {
 			System.out.println("Invalid type: " + type);
@@ -61,72 +57,75 @@ public class Database {
 		}
 		type = type.toUpperCase();
 
+		String sql;
 		switch (type) {
-			case "INCOME" -> {
-				incomeSelectQuery = stmt
-						.executeQuery("select * from income where transactionId = '" + transactionId + "'");
-				if (incomeSelectQuery.next()) {
-					return true;
-				}
-				break;
-			}
-			case "EXPENSES" -> {
-				expensesSelectQuery = stmt
-						.executeQuery("select * from expenses where transactionId = '" + transactionId + "'");
-				if (expensesSelectQuery.next()) {
-					return true;
-				}
-				break;
-			}
+			case "INCOME" -> sql = "SELECT * FROM income WHERE transactionId = ?";
+			case "EXPENSES" -> sql = "SELECT * FROM expenses WHERE transactionId = ?";
 			default -> {
 				System.out.println("Invalid Type: " + type);
 				return false;
 			}
 		}
-		System.out.println("Transaction not found.");
+
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setString(1, transactionId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (rs.next()) {
+					System.out.println("Transaction Verification Succeeded");
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 
 	// Fetch all transactions
 	public List<Transaction> fetchTransactions(int accountId) throws SQLException {
-		ResultSet incomeSelectQuery, expensesSelectQuery;
 		List<Transaction> transactions = new ArrayList<>();
 
-		incomeSelectQuery = stmt.executeQuery("select * from income where accountId = " + accountId);
-		while (incomeSelectQuery.next()) {
-			Transaction incomeTransaction = new Transaction();
-			incomeTransaction.setAccountId(incomeSelectQuery.getInt(1));
-			incomeTransaction.setTransactionId(incomeSelectQuery.getString(2));
-			incomeTransaction.setType(incomeSelectQuery.getString(3));
-			incomeTransaction.setAmount(incomeSelectQuery.getDouble(4));
-			incomeTransaction.setSource(incomeSelectQuery.getString(5));
-			incomeTransaction.setDescription(incomeSelectQuery.getString(6));
-			incomeTransaction.setDate(incomeSelectQuery.getDate(7));
-			incomeTransaction.setSystem_date(incomeSelectQuery.getTimestamp(8));
-			transactions.add(incomeTransaction);
-		}
-		incomeSelectQuery.close();
+		String incomeSql = "SELECT * FROM income WHERE accountId = ?";
+		String expensesSql = "SELECT * FROM expenses WHERE accountId = ?";
 
-		expensesSelectQuery = stmt.executeQuery("select * from expenses where accountId = " + accountId);
-		while (expensesSelectQuery.next()) {
-			Transaction expensesTransaction = new Transaction();
-			expensesTransaction.setAccountId(expensesSelectQuery.getInt(1));
-			expensesTransaction.setTransactionId(expensesSelectQuery.getString(2));
-			expensesTransaction.setType(expensesSelectQuery.getString(3));
-			expensesTransaction.setAmount(expensesSelectQuery.getDouble(4));
-			expensesTransaction.setCategory(expensesSelectQuery.getString(5));
-			expensesTransaction.setDescription(expensesSelectQuery.getString(6));
-			expensesTransaction.setDate(expensesSelectQuery.getDate(7));
-			expensesTransaction.setSystem_date(expensesSelectQuery.getTimestamp(8));
-			transactions.add(expensesTransaction);
-		}
-		expensesSelectQuery.close();
+		try (
+				PreparedStatement incomeStmt = con.prepareStatement(incomeSql);
+				PreparedStatement expensesStmt = con.prepareStatement(expensesSql)) {
+			incomeStmt.setInt(1, accountId);
+			try (ResultSet incomeSelectQuery = incomeStmt.executeQuery()) {
+				while (incomeSelectQuery.next()) {
+					Transaction incomeTransaction = new Transaction();
+					incomeTransaction.setAccountId(incomeSelectQuery.getInt(1));
+					incomeTransaction.setTransactionId(incomeSelectQuery.getString(2));
+					incomeTransaction.setType(incomeSelectQuery.getString(3));
+					incomeTransaction.setAmount(incomeSelectQuery.getDouble(4));
+					incomeTransaction.setSource(incomeSelectQuery.getString(5));
+					incomeTransaction.setDescription(incomeSelectQuery.getString(6));
+					incomeTransaction.setDate(incomeSelectQuery.getDate(7));
+					incomeTransaction.setSystem_date(incomeSelectQuery.getTimestamp(8));
+					transactions.add(incomeTransaction);
+				}
+			}
 
+			expensesStmt.setInt(1, accountId);
+			try (ResultSet expensesSelectQuery = expensesStmt.executeQuery()) {
+				while (expensesSelectQuery.next()) {
+					Transaction expensesTransaction = new Transaction();
+					expensesTransaction.setAccountId(expensesSelectQuery.getInt(1));
+					expensesTransaction.setTransactionId(expensesSelectQuery.getString(2));
+					expensesTransaction.setType(expensesSelectQuery.getString(3));
+					expensesTransaction.setAmount(expensesSelectQuery.getDouble(4));
+					expensesTransaction.setCategory(expensesSelectQuery.getString(5));
+					expensesTransaction.setDescription(expensesSelectQuery.getString(6));
+					expensesTransaction.setDate(expensesSelectQuery.getDate(7));
+					expensesTransaction.setSystem_date(expensesSelectQuery.getTimestamp(8));
+					transactions.add(expensesTransaction);
+				}
+			}
+		}
 		return transactions;
 	}
 
 	// Insert transaction into database
-	public void insertTransaction(Transaction transaction, int accountId) throws SQLException {
+	public boolean insertTransaction(Transaction transaction, int accountId) throws SQLException {
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
 		double amount = transaction.getAmount();
@@ -138,177 +137,239 @@ public class Database {
 		if (!verifyTransaction(transactionId, type)) {
 			switch (type) {
 				case "INCOME" -> {
-					source = source.toUpperCase();
-					description = description.toUpperCase();
-					stmt.executeUpdate(
-							"insert into income(accountId, transactionId, type, amount, source, description, date) values ("
-									+ accountId + ",'" + transactionId + "','" + type + "','" + amount + "','"
-									+ source + "','" + description + "','" + date + "')");
-					break;
+					source = source != null ? source.toUpperCase() : null;
+					description = description != null ? description.toUpperCase() : null;
+					String sql = "INSERT INTO income(accountId, transactionId, type, amount, source, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+					try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+						pstmt.setInt(1, accountId);
+						pstmt.setString(2, transactionId);
+						pstmt.setString(3, type);
+						pstmt.setDouble(4, amount);
+						pstmt.setString(5, source);
+						pstmt.setString(6, description);
+						pstmt.setDate(7, date);
+						pstmt.executeUpdate();
+					}
+					return true;
 				}
 				case "EXPENSES" -> {
-					category = category.toUpperCase();
-					description = description.toUpperCase();
-					stmt.executeUpdate(
-							"insert into expenses(accountId, transactionId, type, amount, category, description, date) values ("
-									+ accountId + ",'" + transactionId + "','" + type + "','" + amount + "','"
-									+ category + "','" + description + "','" + date + "')");
-					break;
+					category = category != null ? category.toUpperCase() : null;
+					description = description != null ? description.toUpperCase() : null;
+					String sql = "INSERT INTO expenses(accountId, transactionId, type, amount, category, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+					try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+						pstmt.setInt(1, accountId);
+						pstmt.setString(2, transactionId);
+						pstmt.setString(3, type);
+						pstmt.setDouble(4, amount);
+						pstmt.setString(5, category);
+						pstmt.setString(6, description);
+						pstmt.setDate(7, date);
+						pstmt.executeUpdate();
+					}
+					return true;
 				}
 				default -> {
 					System.out.println("Invalid Type: " + transaction.getType());
-					return;
+					return false;
 				}
 			}
 		}
+		return false;
 	}
 
 	// Update transaction in database
-	public void updateTransaction(Transaction transaction) throws SQLException {
+	public boolean updateTransaction(Transaction transaction) throws SQLException {
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
-		double amount = transaction.getAmount();
-		Date date = transaction.getDate();
 
+		// Fetch current transaction from DB
+		Transaction current = null;
+		String selectSql;
 		if (verifyTransaction(transactionId, type)) {
 			switch (type) {
-				case "INCOME" -> {
-					String source = transaction.getSource().toUpperCase();
-					String description = transaction.getDescription().toUpperCase();
-					stmt.executeUpdate(
-							"update income set amount = " + amount + " where transactionId = '" + transactionId + "'");
-					stmt.executeUpdate("update income set source = '" + source + "' where transactionId = '"
-							+ transactionId + "'");
-					stmt.executeUpdate("update income set description = '" + description + "' where transactionId = '"
-							+ transactionId + "'");
-					stmt.executeUpdate(
-							"update income set date = '" + date + "' where transactionId = '" + transactionId + "'");
-					break;
-				}
-				case "EXPENSES" -> {
-					String category = transaction.getCategory().toUpperCase();
-					String description = transaction.getDescription().toUpperCase();
-					stmt.executeUpdate("update expenses set amount = " + amount + " where transactionId = '"
-							+ transactionId + "'");
-					stmt.executeUpdate("update expenses set category = '" + category + "' where transactionId = '"
-							+ transactionId + "'");
-					stmt.executeUpdate("update income set description = '" + description + "' where transactionId = '"
-							+ transactionId + "'");
-					stmt.executeUpdate(
-							"update expenses set date = '" + date + "' where transactionId ='" + transactionId + "'");
-				}
+				case "INCOME" ->
+					selectSql = "SELECT amount, source, description, date FROM income WHERE transactionId = ?";
+				case "EXPENSES" ->
+					selectSql = "SELECT amount, category, description, date FROM expenses WHERE transactionId = ?";
 				default -> {
 					System.out.println("Invalid Type: " + transaction.getType());
-					return;
+					return false;
 				}
 			}
-		}
 
+			try (PreparedStatement selectStmt = con.prepareStatement(selectSql)) {
+				selectStmt.setString(1, transactionId);
+				try (ResultSet rs = selectStmt.executeQuery()) {
+					if (rs.next()) {
+						current = new Transaction();
+						current.setAmount(rs.getDouble("amount"));
+						if (type.equals("INCOME")) {
+							current.setSource(rs.getString("source"));
+						} else {
+							current.setCategory(rs.getString("category"));
+						}
+						current.setDescription(rs.getString("description"));
+						current.setDate(rs.getDate("date"));
+					}
+				}
+			}
+
+			if (current != null) {
+				double amount = transaction.getAmount() != 0.0 ? transaction.getAmount() : current.getAmount();
+				String description = transaction.getDescription() != null && !transaction.getDescription().isBlank()
+						? transaction.getDescription().toUpperCase()
+						: current.getDescription();
+				Date date = transaction.getDate() != null ? transaction.getDate() : current.getDate();
+
+				if (type.equals("INCOME")) {
+					String source = transaction.getSource() != null && !transaction.getSource().isBlank()
+							? transaction.getSource().toUpperCase()
+							: current.getSource();
+
+					String updateSql = "UPDATE income SET amount = ?, source = ?, description = ?, date = ? WHERE transactionId = ?";
+					try (PreparedStatement updateStmt = con.prepareStatement(updateSql)) {
+						updateStmt.setDouble(1, amount);
+						updateStmt.setString(2, source);
+						updateStmt.setString(3, description);
+						updateStmt.setDate(4, date);
+						updateStmt.setString(5, transactionId);
+						updateStmt.executeUpdate();
+					}
+					return true;
+				} else if (type.equals("EXPENSES")) {
+					String category = transaction.getCategory() != null && !transaction.getCategory().isBlank()
+							? transaction.getCategory().toUpperCase()
+							: current.getCategory();
+
+					String updateSql = "UPDATE expenses SET amount = ?, category = ?, description = ?, date = ? WHERE transactionId = ?";
+					try (PreparedStatement updateStmt = con.prepareStatement(updateSql)) {
+						updateStmt.setDouble(1, amount);
+						updateStmt.setString(2, category);
+						updateStmt.setString(3, description);
+						updateStmt.setDate(4, date);
+						updateStmt.setString(5, transactionId);
+						updateStmt.executeUpdate();
+					}
+					return true;
+				}
+			} else {
+				System.out.println("No current transaction found for transactionId: " + transactionId);
+				return false;
+			}
+		}
+		System.out.println("Transaction does not exist");
+		return false;
 	}
 
 	// Delete transaction in database
-	public void deleteTransaction(Transaction transaction) throws SQLException {
+	public boolean deleteTransaction(Transaction transaction) throws SQLException {
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
 
 		if (verifyTransaction(transactionId, type)) {
+			String sql;
 			switch (type) {
-				case "INCOME" -> {
-					stmt.executeUpdate("delete from income where transactionId = '" + transactionId + "'");
-					break;
-				}
-				case "EXPENSES" -> {
-					stmt.executeUpdate("delete from expenses where transactionId = '" + transactionId + "'");
-					break;
-				}
+				case "INCOME" -> sql = "DELETE FROM income WHERE transactionId = ?";
+				case "EXPENSES" -> sql = "DELETE FROM expenses WHERE transactionId = ?";
 				default -> {
 					System.out.println("Invalid Type: " + transaction.getType());
-					return;
+					return false;
 				}
 			}
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setString(1, transactionId);
+				pstmt.executeUpdate();
+			}
+			return true;
 		}
+		System.out.print("Transaction bnot found");
+		return false;
 	}
 
 	// Verify user account in database
 	public boolean verifyUserAccount(int accountId) throws SQLException {
-		ResultSet accountSelectQuery;
-
-		accountSelectQuery = stmt.executeQuery("select * from userAccount where accountId = " + accountId);
-		if (accountSelectQuery.next()) {
-			System.out.println("User account Id found.\n");
-			return true;
+		String sql = "SELECT * FROM userAccount WHERE accountId = ?";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setInt(1, accountId);
+			try (ResultSet accountSelectQuery = pstmt.executeQuery()) {
+				if (accountSelectQuery.next()) {
+					System.out.println("User account Id found.\n");
+					return true;
+				}
+				System.out.println("User account Id not found.\n");
+			}
 		}
-
-		System.out.println("User account Id not found.\n");
 		return false;
 	}
 
 	// Verify User account by username in database
 	public boolean verifyAccountByUsername(String username) throws SQLException {
-		ResultSet accountSelectQuery;
-
-		accountSelectQuery = stmt.executeQuery("select * from userAccount where username = '" + username + "'");
-		if (accountSelectQuery.next()) {
-			System.out.println("User account username found.\n");
-			return true;
+		String sql = "SELECT * FROM userAccount WHERE username = ?";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setString(1, username);
+			try (ResultSet accountSelectQuery = pstmt.executeQuery()) {
+				if (accountSelectQuery.next()) {
+					System.out.println("User account username found.\n");
+					return true;
+				}
+				System.out.println("User account username not found.\n");
+			}
 		}
-
-		System.out.println("User account username not found.\n");
 		return false;
 	}
 
 	// Get user account in database
 	public UserAccount getUserAccount(int accountId) throws SQLException {
-		ResultSet accountSelectQuery = null;
 		UserAccount userAccount = null;
-
+		String sql = "SELECT * FROM userAccount WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
-			accountSelectQuery = stmt.executeQuery("select * from userAccount where accountId = " + accountId);
-			while (accountSelectQuery.next()) {
-				accountId = accountSelectQuery.getInt(1);
-				String firstName = accountSelectQuery.getString(2);
-				String lastName = accountSelectQuery.getString(3);
-				String username = accountSelectQuery.getString(4);
-				Date birthday = accountSelectQuery.getDate(5);
-				String currency = accountSelectQuery.getString(6);
-				String password = accountSelectQuery.getString(7);
-				String email = accountSelectQuery.getString(8);
-				userAccount = new UserAccount(firstName, lastName, username, birthday, password, email, currency);
-				userAccount.setAccountId(accountId);
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setInt(1, accountId);
+				try (ResultSet rs = pstmt.executeQuery()) {
+					if (rs.next()) {
+						String firstName = rs.getString(2);
+						String lastName = rs.getString(3);
+						String username = rs.getString(4);
+						Date birthday = rs.getDate(5);
+						String currency = rs.getString(6);
+						String password = rs.getString(7);
+						String email = rs.getString(8);
+						userAccount = new UserAccount(firstName, lastName, username, birthday, password, email,
+								currency);
+						userAccount.setAccountId(accountId);
+					}
+				}
 			}
-		}
-		if (accountSelectQuery != null) {
-			accountSelectQuery.close();
 		}
 		return userAccount;
 	}
 
 	// Fetch all user accounts
 	public List<UserAccount> fetchUserAccounts() throws SQLException {
-		ResultSet accountSelectQuery;
 		List<UserAccount> userAccounts = new ArrayList<>();
-
-		accountSelectQuery = stmt.executeQuery("select * from userAccount");
-		while (accountSelectQuery.next()) {
-			int accountId = accountSelectQuery.getInt(1);
-			String firstName = accountSelectQuery.getString(2);
-			String lastName = accountSelectQuery.getString(3);
-			String username = accountSelectQuery.getString(4);
-			Date birthday = accountSelectQuery.getDate(5);
-			String currency = accountSelectQuery.getString(6);
-			String password = accountSelectQuery.getString(7);
-			String email = accountSelectQuery.getString(8);
-			UserAccount userAccount = new UserAccount(firstName, lastName, username, birthday, password, email, currency);
-			userAccounts.add(userAccount);
-			userAccount.setAccountId(accountId);
+		String sql = "SELECT * FROM userAccount";
+		try (PreparedStatement pstmt = con.prepareStatement(sql);
+				ResultSet rs = pstmt.executeQuery()) {
+			while (rs.next()) {
+				int accountId = rs.getInt(1);
+				String firstName = rs.getString(2);
+				String lastName = rs.getString(3);
+				String username = rs.getString(4);
+				Date birthday = rs.getDate(5);
+				String currency = rs.getString(6);
+				String password = rs.getString(7);
+				String email = rs.getString(8);
+				UserAccount userAccount = new UserAccount(firstName, lastName, username, birthday, password, email,
+						currency);
+				userAccount.setAccountId(accountId);
+				userAccounts.add(userAccount);
+			}
 		}
-
-		accountSelectQuery.close();
 		return userAccounts;
 	}
 
 	// Insert user account into database
-	public void insertAccount(UserAccount userAccount) throws SQLException {
+	public boolean insertAccount(UserAccount userAccount) throws SQLException {
 		String firstName = userAccount.getFirstName();
 		String lastName = userAccount.getLastName();
 		String username = userAccount.getUsername();
@@ -317,59 +378,164 @@ public class Database {
 		String email = userAccount.getEmail();
 		String currency = userAccount.getCurrency();
 
-		stmt.executeUpdate(
-				"insert into userAccount(firstName, lastName, username, birthday, currency, password, email) values ('"
-						+ firstName + "','" + lastName + "','" + username + "','" + birthday
-						+ "','" + currency + "','"
-						+ password + "','" + email + "')");
+		// Hash Password
+		String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
+
+		// Capitalize Currency
+		String capCurrency = currency.toUpperCase();
+
+		String sql = "INSERT INTO userAccount(firstName, lastName, username, birthday, currency, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setString(1, firstName);
+			pstmt.setString(2, lastName);
+			pstmt.setString(3, username);
+			pstmt.setDate(4, birthday);
+			pstmt.setString(5, capCurrency);
+			pstmt.setString(6, hashedPassword);
+			pstmt.setString(7, email);
+			pstmt.executeUpdate();
+		}
 		System.out.println("Account added Successfully!\n");
+		return true;
 	}
 
 	// Update user account in database
-	public void updateAccount(UserAccount userAccount) throws SQLException {
+	public boolean updateAccount(UserAccount userAccount) throws SQLException {
 		int accountId = userAccount.getAccountId();
-		String firstName = userAccount.getFirstName();
-		String lastName = userAccount.getLastName();
-		String username = userAccount.getUsername();
-		Date birthday = userAccount.getBirthday();
-		String password = userAccount.getPassword();
-		String email = userAccount.getEmail();
 
-		if (verifyUserAccount(accountId)) {
-			stmt.executeUpdate(
-					"update userAccount set firstName = '" + firstName + "' where accountId = " + accountId);
-			stmt.executeUpdate(
-					"update userAccount set lastName = '" + lastName + "' where accountId = " + accountId);
-			stmt.executeUpdate(
-					"update userAccount set username = '" + username + "' where accountId = " + accountId);
-			stmt.executeUpdate(
-					"update userAccount set birthday = '" + birthday + "' where accountId = " + accountId);
-			stmt.executeUpdate(
-					"update userAccount set password = '" + password + "' where accountId = " + accountId);
-			stmt.executeUpdate("update userAccount set email = '" + email + "' where accountId = " + accountId);
+		// Fetch current user account from DB
+		UserAccount current = getUserAccount(accountId);
+
+		if (userAccount.getCurrency() != null) {
+			System.out.println("Currency cannot be updated. Update in Settings");
 		}
+
+		if (verifyUserAccount(accountId) && current != null) {
+			String firstName = userAccount.getFirstName() != null && !userAccount.getFirstName().isBlank()
+					? userAccount.getFirstName()
+					: current.getFirstName();
+			String lastName = userAccount.getLastName() != null && !userAccount.getLastName().isBlank()
+					? userAccount.getLastName()
+					: current.getLastName();
+			String username = userAccount.getUsername() != null && !userAccount.getUsername().isBlank()
+					? userAccount.getUsername()
+					: current.getUsername();
+			Date birthday = userAccount.getBirthday() != null
+					? userAccount.getBirthday()
+					: current.getBirthday();
+			String password = userAccount.getPassword() != null && !userAccount.getPassword().isBlank()
+					? BCrypt.hashpw(userAccount.getPassword(), BCrypt.gensalt(12))
+					: current.getPassword();
+			String email = userAccount.getEmail() != null && !userAccount.getEmail().isBlank()
+					? userAccount.getEmail()
+					: current.getEmail();
+
+			String sql = "UPDATE userAccount SET firstName = ?, lastName = ?, username = ?, birthday = ?, password = ?, email = ? WHERE accountId = ?";
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setString(1, firstName);
+				pstmt.setString(2, lastName);
+				pstmt.setString(3, username);
+				pstmt.setDate(4, birthday);
+				pstmt.setString(5, password);
+				pstmt.setString(6, email);
+				pstmt.setInt(7, accountId);
+				pstmt.executeUpdate();
+			}
+			System.out.println("Account Updated Successfully");
+			return true;
+		}
+		System.out.println("Account does not exist");
+		return false;
 	}
 
 	// Delete user account in database
-	public void deleteUserAccount(UserAccount userAccount) throws SQLException {
-		int accountId = userAccount.getAccountId();
-
+	public boolean deleteUserAccount(int accountId) throws SQLException {
 		if (verifyUserAccount(accountId)) {
-			stmt.executeUpdate("delete from userAccount where accountId = '" + accountId + "'");
+			boolean result = deleteSessions(accountId); // Remove all sessions first
+			if (result) {
+				String sql = "DELETE FROM userAccount WHERE accountId = ?";
+				try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+					pstmt.setInt(1, accountId);
+					pstmt.executeUpdate();
+				}
+				System.out.println("Account deleted from database");
+				return true;
+			}
 		}
+		System.out.println("Account does not exist");
+		return false;
 	}
 
-	public void updateAccountPassword(int accountId, String password) throws SQLException {
+	public boolean updateAccountCurrency(int accountId, String newCurrency) throws SQLException {
+		// Capitalize Currency
+		String capCurrency = newCurrency.toUpperCase();
+
+		String sql = "UPDATE userAccount SET currency = ? WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
-			stmt.executeUpdate(
-					"update userAccount set password = '" + password + "' where accountId = " + accountId);
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setString(1, capCurrency);
+				pstmt.setInt(2, accountId);
+				pstmt.executeUpdate();
+			}
+			System.out.println("Currency updated successfully for accountId: " + accountId);
+			return true;
 		}
+		System.out.println("User Account does not exist");
+		return false;
 	}
 
-	public void insertSession(String sessionId, int accountId) throws SQLException {
+	public boolean updateAccountPassword(int accountId, String password) throws SQLException {
+		// Hash Password
+		String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
+
+		String sql = "UPDATE userAccount SET password = ? WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
-			stmt.executeUpdate(
-					"insert into sessions(sessionId, accountId) values ('" + sessionId + "'," + accountId + ")");
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setString(1, hashedPassword);
+				pstmt.setInt(2, accountId);
+				pstmt.executeUpdate();
+			}
+			System.out.println("Account password successfully changed");
+			return true;
 		}
+		System.out.println("User Account does not exist");
+		return false;
+	}
+
+	public boolean insertSession(String token, String sessionId, int accountId) throws SQLException {
+		if (verifyUserAccount(accountId)) {
+			String sql = "INSERT INTO sessions(sessionId, accountId, token) VALUES (?, ?, ?)";
+			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+				pstmt.setString(1, sessionId);
+				pstmt.setInt(2, accountId);
+				pstmt.setString(3, token);
+				pstmt.executeUpdate();
+			}
+			System.out.println("Session Started");
+			return true;
+		}
+		System.out.println("User Account does not exist");
+		return false;
+	}
+
+	// Helper: Delete all User sessions
+	public boolean deleteSessions(int accountId) throws SQLException {
+		String sql = "DELETE FROM sessions WHERE accountId = ?";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setInt(1, accountId);
+			pstmt.executeUpdate();
+		}
+		return true;
+	}
+
+	// Helper: Delete user session
+	public boolean deleteSession(String token, int accountId) throws SQLException {
+		String sql = "DELETE FROM sessions WHERE token = ? AND accountId = ?";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setString(1, token);
+			pstmt.setInt(2, accountId);
+			pstmt.executeUpdate();
+		}
+		return true;
 	}
 }

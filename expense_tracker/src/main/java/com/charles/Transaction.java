@@ -85,4 +85,18 @@ public class Transaction {
 	public void setSystem_date(Timestamp system_date) {
 		this.system_date = system_date;
 	}
+
+	@Override
+	public String toString() {
+		return "Transaction{" +
+				"transactionId='" + transactionId + '\'' +
+				", type='" + type + '\'' +
+				", amount=" + amount +
+				", category='" + category + '\'' +
+				", source='" + source + '\'' +
+				", description='" + description + '\'' +
+				", date=" + date +
+				", accountId=" + accountId +
+				'}';
+	}
 }

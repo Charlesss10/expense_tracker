@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class ReportSummary extends TransactionList {
     private double totalIncome;
     private double totalExpenses;
@@ -20,39 +23,37 @@ public class ReportSummary extends TransactionList {
     private Map<String, String> expensesByCategory = new HashMap<>();
     private Map<String, String> incomeBySource = new HashMap<>();
 
-    public ReportSummary(AuthManager authManager, Settings settings) throws SQLException {
-        super(authManager, settings);
+    public ReportSummary(Settings settings, TransactionManager transactionManager)
+            throws SQLException {
+        super(settings, transactionManager);
     }
 
-    public boolean generateReportSummary(String targetMonth, String targetYear) throws SQLException {
+    public boolean generateReportSummary(int accountId, String targetMonth, String targetYear) throws SQLException {
         // Filter transactions based on tragetMonth or targetYear
-        List<Transaction> filteredTransactions = this.totalTransactions.stream()
+        List<Transaction> filteredTransactions = transactionManager.getTransactions(accountId).stream()
                 .filter(t -> {
-                    int targetYearValue = 0;
-                    int targetMonthValue = 0;
-
                     if (targetMonth != null) {
-                        String[] parts = targetMonth.split("-"); // Split "YYYY-MM" into year and month
-                        targetYearValue = Integer.parseInt(parts[0]); // Extract month as integer
-                        targetMonthValue = Integer.parseInt(parts[1]); // Extract year as integer
+                        String[] parts = targetMonth.split("-");
+                        int filterYear = Integer.parseInt(parts[0]);
+                        int filterMonth = Integer.parseInt(parts[1]);
+
+                        Calendar cal = Calendar.getInstance();
+                        cal.setTime(t.getDate());
+                        int transactionYear = cal.get(Calendar.YEAR);
+                        int transactionMonth = cal.get(Calendar.MONTH) + 1; // Calendar.MONTH is zero-based
+
+                        return transactionYear == filterYear && transactionMonth == filterMonth;
                     } else if (targetYear != null) {
-                        targetYearValue = Integer.parseInt(targetYear); // Only year is specified
+                        int filterYear = Integer.parseInt(targetYear);
+                        Calendar cal = Calendar.getInstance();
+                        cal.setTime(t.getDate());
+                        int transactionYear = cal.get(Calendar.YEAR);
+                        return transactionYear == filterYear;
                     }
-
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTime(t.getDate()); // Set the Date into the Calendar
-
-                    int transactionMonth = cal.get(Calendar.MONTH) + 1; // Calendar.MONTH is zero-based
-                    int transactionYear = cal.get(Calendar.YEAR);
-
-                    boolean matchesMonth = targetMonthValue == 0 || transactionMonth == targetMonthValue;
-                    boolean matchesYear = targetYearValue == 0 || transactionYear == targetYearValue;
-
-                    return matchesMonth && matchesYear;
+                    return true; // If no filter, include all
                 })
                 .collect(Collectors.toList());
 
-        // Generate Report Summary View
         if (!filteredTransactions.isEmpty()) {
             getTotalBalance(filteredTransactions);
             categorizeExpenses(filteredTransactions);
@@ -65,36 +66,6 @@ public class ReportSummary extends TransactionList {
                 this.highestCategory = "N/A";
             }
 
-            System.out.println("Report Summary\n");
-            System.out.println("Total Income: " + this.totalIncome + " " + settings.getPreferredCurrency());
-            System.out.println("Total Expenses: " + this.totalExpenses + " " + settings.getPreferredCurrency());
-            System.out.println("Total Balance: " + this.totalBalance + " " + settings.getPreferredCurrency());
-            System.out.println("Highest Source: " + this.highestSource);
-            System.out.println("Highest Category: " + this.highestCategory);
-
-            if (!this.incomeBySource.isEmpty()) {
-                System.out.println("\nIncome by Source:");
-                System.out.println("-----------------");
-                for (Map.Entry<String, String> entry : this.incomeBySource.entrySet()) {
-                    for (Map.Entry<String, String> percentage : this.incomePercentage.entrySet()) {
-                        if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
-                            System.out.println(
-                                    entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue() + "%)");
-                    }
-                }
-            }
-
-            if (!this.expensesByCategory.isEmpty()) {
-                System.out.println("\nExpenses by Category:");
-                System.out.println("---------------------");
-                for (Map.Entry<String, String> entry : this.expensesByCategory.entrySet()) {
-                    for (Map.Entry<String, String> percentage : this.expensesPercentage.entrySet()) {
-                        if (entry.getKey().equalsIgnoreCase(percentage.getKey()))
-                            System.out.println(
-                                    entry.getKey() + " - " + entry.getValue() + " (" + percentage.getValue() + "%)");
-                    }
-                }
-            }
             return true;
         } else {
             System.out.println("No transaction record found.");
@@ -102,6 +73,35 @@ public class ReportSummary extends TransactionList {
         }
     }
 
+    public Map<String, Object> getReportData() throws SQLException {
+        Map<String, Object> report = new HashMap<>();
+        report.put("totalIncome", this.totalIncome);
+        report.put("totalExpenses", this.totalExpenses);
+        report.put("totalBalance", this.totalBalance);
+        report.put("highestCategory", this.highestCategory);
+        report.put("highestSource", this.highestSource);
+        report.put("expensesByCategory", this.expensesByCategory);
+        report.put("incomeBySource", this.incomeBySource);
+        report.put("expensesPercentage", this.expensesPercentage);
+        report.put("incomePercentage", this.incomePercentage);
+
+        return report;
+    }
+
+    // Helper
+    public void clearFilter() {
+        this.totalIncome = 0.0;
+        this.totalExpenses = 0.0;
+        this.totalBalance = 0.0;
+        this.highestCategory = null;
+        this.highestSource = null;
+        this.expensesByCategory = new HashMap<>();
+        this.incomeBySource = new HashMap<>();
+        this.expensesPercentage = new HashMap<>();
+        this.incomePercentage = new HashMap<>();
+    }
+
+    // Helper
     public void getTotalBalance(List<Transaction> filteredTransactions) throws SQLException {
         this.totalIncome = 0.0;
         this.totalExpenses = 0.0;
@@ -123,6 +123,7 @@ public class ReportSummary extends TransactionList {
         this.totalBalance = this.totalIncome - this.totalExpenses;
     }
 
+    // Helper
     public void categorizeExpenses(List<Transaction> filteredTransactions) {
         // Group by Category
         if (this.expensesByCategory != null) {
@@ -156,6 +157,7 @@ public class ReportSummary extends TransactionList {
         }
     }
 
+    // Helper
     public void categorizeIncome(List<Transaction> filteredTransactions) {
         // Group by Category
         if (this.incomeBySource != null) {
@@ -225,12 +227,45 @@ public class ReportSummary extends TransactionList {
         System.out.println("Report successfully exported to CSV: " + filePath + "\n");
     }
 
+    // Getters
+    public double getTotalIncome() {
+        return this.totalIncome;
+    }
+
+    public double getTotalExpenses() {
+        return this.totalExpenses;
+    }
+
+    public double getTotalBalance() {
+        return this.totalBalance;
+    }
+
+    public String getHighestCategory() {
+        return this.highestCategory;
+    }
+
+    public String getHighestSource() {
+        return this.highestSource;
+    }
+
+    public Map<String, String> getIncomeBySource() {
+        return this.incomeBySource;
+    }
+
+    public Map<String, String> getExpensesByCategory() {
+        return this.expensesByCategory;
+    }
+
+    public Map<String, String> getExpensesPercentage() {
+        return this.expensesPercentage;
+    }
+
+    public Map<String, String> getIncomePercentage() {
+        return this.incomePercentage;
+    }
+
     @Override
     public void update() {
-        try {
-            fetchTransactions();
-            System.out.println("Report Summary: Update in Transaction Manager!\n");
-        } catch (SQLException ex) {
-        }
+        System.out.println("Report Summary: Update in Transaction Manager!\n");
     }
 }

@@ -7,21 +7,21 @@ public class App {
 	private static UserInterface userInterface;
 
 	// Root entry into the application
-	public static void main(String args[]) throws SQLException, ClassNotFoundException, IOException{
+	public static void main(String args[]) throws SQLException, ClassNotFoundException, IOException {
 		UserAccountManager userAccountManager = new UserAccountManager();
 		AuthManager authManager = new AuthManager(userAccountManager);
-		Settings settings = new Settings(authManager, userAccountManager);
-		TransactionManager transactionManager = new TransactionManager(authManager, settings);
-		TransactionHistory transactionHistory = new TransactionHistory(authManager, settings);
-		ExpenseSummary expenseSummary = new ExpenseSummary(authManager, settings);
-		ReportSummary reportSummary = new ReportSummary(authManager, settings);
+		Settings settings = new Settings(userAccountManager);
+		TransactionManager transactionManager = new TransactionManager();
+		ExpenseSummary expenseSummary = new ExpenseSummary(settings, transactionManager);
+		ReportSummary reportSummary = new ReportSummary(settings, transactionManager);
 		DataStorage dataStorage = new DataStorage(transactionManager);
+		Database database = Database.getInstance();
 
-		transactionManager.registerObserver(transactionHistory);
 		transactionManager.registerObserver(expenseSummary);
 		transactionManager.registerObserver(reportSummary);
 
-		userInterface = new Management(userAccountManager, authManager, transactionManager, transactionHistory, expenseSummary, reportSummary, settings, dataStorage);
+		userInterface = new Management(userAccountManager, authManager, transactionManager, expenseSummary,
+				reportSummary, settings, dataStorage, database);
 		userInterface.run();
 	}
 }

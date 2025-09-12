@@ -4,6 +4,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class UserAccountManager {
     private List<UserAccount> userAccounts = new ArrayList<>();
     private final Database database = Database.getInstance();
@@ -13,15 +16,30 @@ public class UserAccountManager {
     }
 
     // Add User Account
-    public void addAccount(UserAccount userAccount) throws SQLException {
+    public boolean addAccount(UserAccount userAccount) throws SQLException {
         if (!verifyAccountByUsername(userAccount.getUsername())) {
-            database.insertAccount(userAccount);
-            this.userAccounts = database.fetchUserAccounts();
+            if (userAccount.getCurrency().equalsIgnoreCase("Euro")
+                    | userAccount.getCurrency().equalsIgnoreCase("Dollar")) {
+                boolean result = database.insertAccount(userAccount);
+                if (result) {
+                    System.out.println("User Account Added");
+                    return true;
+                } else {
+                    return false;
+                }
+
+            } else {
+                System.out.println("Invalid Currency Choice!");
+                return false;
+            }
         }
+        System.out.println("Username already exists");
+        return false;
     }
 
     // Edit User Account
     public boolean editUserAccount(UserAccount userAccount) throws SQLException {
+        fetchUserAccounts();
         for (UserAccount validAccount : this.userAccounts) {
             if (validAccount.getAccountId() == userAccount.getAccountId()) {
                 validAccount.setFirstName(userAccount.getFirstName());
@@ -31,9 +49,29 @@ public class UserAccountManager {
                 validAccount.setPassword(userAccount.getPassword());
                 validAccount.setEmail(userAccount.getEmail());
 
-                database.updateAccount(userAccount);
-                System.out.println("Account modified successfully!");
-                return true;
+                boolean result = database.updateAccount(validAccount);
+                if (result) {
+                    System.out.println("Account modified successfully!");
+                    return true;
+                }
+            }
+        }
+        System.out.println("User Account not found");
+        return false;
+    }
+
+    // Delete User Account
+    public boolean deleteUserAccount(int accountId) throws SQLException {
+        fetchUserAccounts();
+        for (UserAccount validUserAccount : this.userAccounts) {
+            if (validUserAccount.getAccountId() == accountId) {
+                userAccounts.remove(validUserAccount);
+
+                boolean result = database.deleteUserAccount(accountId);
+                if (result) {
+                    System.out.println("Account deleted successfully!\n");
+                    return true;
+                }
             }
         }
         System.out.println("User Account not found");
@@ -42,59 +80,48 @@ public class UserAccountManager {
 
     // Edit User Account Password
     public boolean editUserAccountPassword(int userAccountId, String password) throws SQLException {
+        fetchUserAccounts();
         for (UserAccount validAccount : this.userAccounts) {
             if (validAccount.getAccountId() == userAccountId) {
                 validAccount.setPassword(password);
-                database.updateAccountPassword(userAccountId, password);
-                System.out.println("Account password modified successfully!");
-                return true;
+                boolean result = database.updateAccountPassword(userAccountId, password);
+                if (result) {
+                    System.out.println("Account password modified successfully!");
+                    return true;
+                }
             }
         }
-        System.out.println("User Accousnt not found");
+        System.out.println("User Account not found");
         return false;
-    }
-
-    // Delete User Account
-    public void deleteUserAccount(UserAccount userAccount) throws SQLException {
-        for (UserAccount validUserAccount : this.userAccounts) {
-            if (validUserAccount.getAccountId() == userAccount.getAccountId()) {
-                userAccounts.remove(validUserAccount);
-
-                database.deleteUserAccount(userAccount);
-                System.out.println("Transaction deleted successfully!\n");
-                break;
-            }
-        }
-    }
-
-    // Verify User Account
-    public boolean verifyUserAccount(int accountId) throws SQLException {
-        return database.verifyUserAccount(accountId);
-    }
-
-    // Verify User account by username
-    public boolean verifyAccountByUsername(String username) throws SQLException {
-        return database.verifyAccountByUsername(username);
     }
 
     // Get User Account
     public UserAccount getUserAccount(int accountId) throws SQLException {
         UserAccount userAccount;
-
-        if (database.verifyUserAccount(accountId)) {
-            userAccount = database.getUserAccount(accountId);
+        userAccount = database.getUserAccount(accountId);
+        if (userAccount != null) {
             return userAccount;
         }
         return null;
     }
 
-    // Get User Accounts
+    // Get User Accounts from the database
     public List<UserAccount> getUserAccounts() throws SQLException {
-        return this.userAccounts;
+        return database.fetchUserAccounts();
     }
 
-    // Fetch all user accounts from the database
+    // Helper: Verify User Account
+    public boolean verifyUserAccount(int accountId) throws SQLException {
+        return database.verifyUserAccount(accountId);
+    }
+
+    // Helper: Verify User account by username
+    public boolean verifyAccountByUsername(String username) throws SQLException {
+        return database.verifyAccountByUsername(username);
+    }
+
+    // Helper: Fetch all user accounts into cache
     public void fetchUserAccounts() throws SQLException {
-        this.userAccounts = database.fetchUserAccounts();
+        this.userAccounts = getUserAccounts();
     }
 }

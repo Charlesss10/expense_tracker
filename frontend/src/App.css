@@ -1,0 +1,201 @@
+/* Main width container for all pages */
+.page-container {
+  max-width: 1000px;
+  margin: auto;
+  background: #fff;
+  padding: 1rem;
+}
+
+.page-header{
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo bar at top right */
+.logo-bar {
+  display: flex;
+}
+
+/* Logo image size*/
+.logo-img {
+  width: 70px;
+  height: auto;
+}
+
+/* Mobile Navigation Drawer styles */
+.mobile-nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px; /* covers left half on most mobile screens */
+  max-width: 90vw;
+  height: 100%;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.10);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  border-top: 5px solid black;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.mobile-nav-drawer.closed {
+  opacity: 0;
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+.mobile-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-nav-logo {
+  height: 40px;
+  cursor: pointer;
+}
+
+.mobile-nav-list {
+  list-style: none;
+  padding: 0 16px;
+  margin: 0;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.mobile-nav-list li {
+  margin-bottom: 12px;
+}
+
+.mobile-nav-link {
+  display: block;
+  width: 100%;
+  padding: 10px 0 10px 12px; /* top, right, bottom, left */
+  color: gray;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+.mobile-nav-link:hover,
+.mobile-nav-link:focus {
+  color: black;
+  text-decoration: none;
+}
+
+.mobile-nav-link.active {
+  color: black;
+}
+
+.mobile-nav-logout {
+  padding: 16px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+.mobile-nav-logout .btn {
+  width: 100%;
+  border-radius: 0;
+}
+
+/* Login page container */
+.login-container {
+  min-height: 90vh;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Login card */
+.login-card {
+  max-width: 400px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #222;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+}
+
+/* Login title */
+.login-title {
+  color: #222;
+  letter-spacing: 2px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Login label */
+.login-label {
+  color: #222;
+  font-weight: 600;
+}
+
+/* Login input */
+.login-input {
+  background: #fff;
+  color: #222;
+  border-color: #222;
+}
+
+/* Login button */
+.btn.login-btn {
+  background: #222 !important;
+  color: #fff !important;
+  border: none !important;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  width: 100%;
+}
+
+/* Forgot password link */
+.forgot-link {
+  color: #222;
+  text-decoration: none;
+}
+
+/* Spinner alignment */
+.login-spinner {
+  margin-right: 0.5rem;
+}
+
+/* Default: gray text for nav links and dropdown toggles */
+.navbar .nav-link,
+.navbar .nav-link.dropdown-toggle {
+    color: #555 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: color 0.2s;
+}
+
+/* On hover or focus: black text */
+.navbar .nav-link:hover,
+.navbar .nav-link:focus,
+.navbar .nav-link.dropdown-toggle:hover,
+.navbar .nav-link.dropdown-toggle:focus {
+    color: #222 !important;
+}
+
+/* When active (current route): black text */
+.navbar .nav-link.active,
+.navbar .nav-link.dropdown-toggle.active,
+.navbar .nav-link.dropdown-toggle.show {
+    color: #222 !important;
+}
+
+/* Make active dropdown item black background and white text */
+.dropdown-menu .active,
+.dropdown-menu .dropdown-item.active,
+.dropdown-menu .dropdown-item:active {
+    background-color: #222 !important;
+    color: #fff !important;
+}

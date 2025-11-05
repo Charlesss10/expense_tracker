@@ -129,11 +129,9 @@
                         </execution>
                     </executions>
                     <!-- If auto-detection fails, uncomment and set your main class -->
-                    <!--
                     <configuration>
                       <mainClass>com.charles.ExpenseTrackerApplication</mainClass>
                     </configuration>
-                    -->
                 </plugin>
             </plugins>
         </pluginManagement>

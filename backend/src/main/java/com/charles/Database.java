@@ -309,7 +309,7 @@ public class Database {
 
 	// Verify user account in database
 	public boolean verifyUserAccount(int accountId) throws SQLException {
-		String sql = "SELECT * FROM userAccount WHERE accountId = ?";
+		String sql = "SELECT * FROM user_account WHERE accountId = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setInt(1, accountId);
 			try (ResultSet accountSelectQuery = pstmt.executeQuery()) {
@@ -324,7 +324,7 @@ public class Database {
 
 	// Verify User account by username in database
 	public boolean verifyAccountByUsername(String username) throws SQLException {
-		String sql = "SELECT * FROM userAccount WHERE username = ?";
+		String sql = "SELECT * FROM user_account WHERE username = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, username);
 			try (ResultSet accountSelectQuery = pstmt.executeQuery()) {
@@ -341,7 +341,7 @@ public class Database {
 	// Get user account in database
 	public UserAccount getUserAccount(int accountId) throws SQLException {
 		UserAccount userAccount = null;
-		String sql = "SELECT * FROM userAccount WHERE accountId = ?";
+		String sql = "SELECT * FROM user_account WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setInt(1, accountId);
@@ -375,7 +375,7 @@ public class Database {
 	// Fetch all user accounts
 	public List<UserAccount> fetchUserAccounts() throws SQLException {
 		List<UserAccount> userAccounts = new ArrayList<>();
-		String sql = "SELECT * FROM userAccount";
+		String sql = "SELECT * FROM user_account";
 		try (PreparedStatement pstmt = con.prepareStatement(sql);
 				ResultSet rs = pstmt.executeQuery()) {
 			while (rs.next()) {
@@ -420,7 +420,7 @@ public class Database {
 		// Capitalize Currency
 		String capCurrency = currency.toUpperCase();
 
-		String sql = "INSERT INTO userAccount(firstName, lastName, username, birthday, currency, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
+		String sql = "INSERT INTO user_account(firstName, lastName, username, birthday, currency, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, firstName);
 			pstmt.setString(2, lastName);
@@ -466,7 +466,7 @@ public class Database {
 					? userAccount.getEmail()
 					: current.getEmail();
 
-			String sql = "UPDATE userAccount SET firstName = ?, lastName = ?, username = ?, birthday = ?, password = ?, email = ? WHERE accountId = ?";
+			String sql = "UPDATE user_account SET firstName = ?, lastName = ?, username = ?, birthday = ?, password = ?, email = ? WHERE accountId = ?";
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, firstName);
 				pstmt.setString(2, lastName);
@@ -489,7 +489,7 @@ public class Database {
 		if (verifyUserAccount(accountId)) {
 			boolean result = deleteSessions(accountId); // Remove all sessions first
 			if (result) {
-				String sql = "DELETE FROM userAccount WHERE accountId = ?";
+				String sql = "DELETE FROM user_account WHERE accountId = ?";
 				try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 					pstmt.setInt(1, accountId);
 					pstmt.executeUpdate();
@@ -506,7 +506,7 @@ public class Database {
 		// Capitalize Currency
 		String capCurrency = newCurrency.toUpperCase();
 
-		String sql = "UPDATE userAccount SET currency = ? WHERE accountId = ?";
+		String sql = "UPDATE user_account SET currency = ? WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, capCurrency);
@@ -524,7 +524,7 @@ public class Database {
 		// Hash Password
 		String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
-		String sql = "UPDATE userAccount SET password = ? WHERE accountId = ?";
+		String sql = "UPDATE user_account SET password = ? WHERE accountId = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, hashedPassword);

@@ -89,11 +89,9 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.0</version>
+                    <version>3.11.0</version> <!-- newer plugin copes better with recent JDKs -->
                     <configuration>
-                        <compilerArgs>
-                            <arg>-parameters</arg>
-                        </compilerArgs>
+                        <release>22</release>
                     </configuration>
                 </plugin>
                 <plugin>

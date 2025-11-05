@@ -15,6 +15,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>22</maven.compiler.release>
+        <start-class>com.charles.ExpenseTrackerApplication</start-class>
     </properties>
 
     <dependencies>
@@ -99,10 +100,6 @@
                     <version>2.22.1</version>
                 </plugin>
                 <plugin>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.0.2</version>
-                </plugin>
-                <plugin>
                     <artifactId>maven-install-plugin</artifactId>
                     <version>2.5.2</version>
                 </plugin>
@@ -119,10 +116,24 @@
                     <artifactId>maven-project-info-reports-plugin</artifactId>
                     <version>3.0.0</version>
                 </plugin>
+                <!-- Spring Boot: create an executable (fat) jar -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>3.3.0</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <!-- If auto-detection fails, uncomment and set your main class -->
+                    <!--
+                    <configuration>
+                      <mainClass>com.charles.ExpenseTrackerApplication</mainClass>
+                    </configuration>
+                    -->
                 </plugin>
             </plugins>
         </pluginManagement>

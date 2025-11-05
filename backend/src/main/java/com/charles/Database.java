@@ -19,13 +19,23 @@ public class Database {
 	// Create database connection
 	private Database() throws ClassNotFoundException, SQLException {
 		Class.forName("com.mysql.cj.jdbc.Driver");
-		String mysql_username = System.getenv("MYSQL_username");
-		String mysql_password = System.getenv("MYSQL_password");
-		String mysql_hostname = System.getenv("MYSQL_hostname");
-		String mysql_schema = System.getenv("MYSQL_schema");
-		con = DriverManager.getConnection("jdbc:mysql://" + mysql_hostname + "/" + mysql_schema, mysql_username,
-				mysql_password);
-		System.out.println("Database Connection created.\n");
+
+		// Environment variables (UPPERCASE for Render)
+		String mysqlUsername = System.getenv("MYSQL_USERNAME");
+		String mysqlPassword = System.getenv("MYSQL_PASSWORD");
+		String mysqlHost = System.getenv("MYSQL_HOST");
+		String mysqlPort = System.getenv("MYSQL_PORT"); // optional, default = 3306
+		String mysqlDb = System.getenv("MYSQL_DB");
+
+		// Build secure JDBC URL
+		String url = String.format(
+				"jdbc:mysql://%s:%s/%s?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+				mysqlHost,
+				(mysqlPort == null || mysqlPort.isEmpty()) ? "3306" : mysqlPort,
+				mysqlDb);
+
+		con = DriverManager.getConnection(url, mysqlUsername, mysqlPassword);
+		System.out.println("✅ Database connection created successfully.");
 	}
 
 	// Static access point

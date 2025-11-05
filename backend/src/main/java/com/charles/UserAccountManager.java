@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appUserAccountManager")
 public class UserAccountManager {
     private List<UserAccount> userAccounts = new ArrayList<>();
     private final Database database = Database.getInstance();

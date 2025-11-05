@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appTransactionManager")
 public class TransactionManager implements Subject {
 	private List<Transaction> transactions = new ArrayList<>();
 	private final Database database = Database.getInstance();

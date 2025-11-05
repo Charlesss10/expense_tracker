@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 
-@Service
+@Service("appAuthManager")
 public class AuthManager {
     private final UserAccountManager userAccountManager;
     private List<UserAccount> userAccounts = new ArrayList<>();

@@ -14,7 +14,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appDataStorage")
 public class DataStorage {
     private final TransactionManager transactionManager;
 

@@ -18,24 +18,35 @@ public class Database {
 
 	// Create database connection
 	private Database() throws ClassNotFoundException, SQLException {
-		Class.forName("com.mysql.cj.jdbc.Driver");
+		// MySQL
+		/*
+		 * Class.forName("com.mysql.cj.jdbc.Driver");
+		 * String sqlUsername = System.getenv("MYSQL_USERNAME");
+		 * String sqlPassword = System.getenv("MYSQL_PASSWORD");
+		 * String sqlHost = System.getenv("MYSQL_HOST");
+		 * String sqlPort = System.getenv("MYSQL_PORT");
+		 * String sqlDb = System.getenv("MYSQL_DB");
+		 * String url = String.format(
+		 * "jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
+		 * sqlHost, sqlPort, sqlDb
+		 * );
+		 */
 
-		// Environment variables (UPPERCASE for Render)
-		String mysqlUsername = System.getenv("MYSQL_USERNAME");
-		String mysqlPassword = System.getenv("MYSQL_PASSWORD");
-		String mysqlHost = System.getenv("MYSQL_HOST");
-		String mysqlPort = System.getenv("MYSQL_PORT"); // optional, default = 3306
-		String mysqlDb = System.getenv("MYSQL_DB");
+		// PostGres
+		Class.forName("org.postgresql.Driver");
+		String sqlUsername = System.getenv("PG_USER");
+		String sqlPassword = System.getenv("PG_PASSWORD");
+		String sqlHost = System.getenv("PG_HOST");
+		String sqlPort = System.getenv("PG_PORT");
+		String sqlDb = System.getenv("PG_DB");
 
-		// Build secure JDBC URL
+		// Render Managed Postgres typically requires SSL:
 		String url = String.format(
-				"jdbc:mysql://%s:%s/%s?useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-				mysqlHost,
-				(mysqlPort == null || mysqlPort.isEmpty()) ? "3306" : mysqlPort,
-				mysqlDb);
+				"jdbc:postgresql://%s:%s/%s?sslmode=require",
+				sqlHost, sqlPort, sqlDb);
 
-		con = DriverManager.getConnection(url, mysqlUsername, mysqlPassword);
-		System.out.println("✅ Database connection created successfully.");
+		this.con = DriverManager.getConnection(url, sqlUsername, sqlPassword);
+		System.out.println("Database connection created successfully to: " + sqlHost + ":" + sqlPort + "/" + sqlDb);
 	}
 
 	// Static access point

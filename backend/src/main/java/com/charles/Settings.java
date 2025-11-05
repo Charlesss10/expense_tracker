@@ -4,7 +4,7 @@ import java.sql.SQLException;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appSettings")
 public class Settings {
     private final UserAccountManager userAccountManager;
     private final Database database = Database.getInstance();

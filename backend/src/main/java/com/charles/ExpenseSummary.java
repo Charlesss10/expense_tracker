@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appExpenseSummary")
 public class ExpenseSummary extends TransactionList {
     private double totalExpenses;
     private String highestCategory;

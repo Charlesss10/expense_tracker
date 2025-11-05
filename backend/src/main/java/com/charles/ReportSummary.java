@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("appReportSummary")
 public class ReportSummary extends TransactionList {
     private double totalIncome;
     private double totalExpenses;

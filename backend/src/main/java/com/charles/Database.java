@@ -42,8 +42,8 @@ public class Database {
 
 		// Render Managed Postgres typically requires SSL:
 		String url = String.format(
-				/* "jdbc:postgresql://%s:%s/%s?sslmode=require",*/ // Uncomment for Render deployment
-				 "jdbc:postgresql://%s:%s/%s?sslmode=disable",
+				"jdbc:postgresql://%s:%s/%s?sslmode=require", // Uncomment for Render deployment
+				 //"jdbc:postgresql://%s:%s/%s?sslmode=disable",
 				sqlHost, sqlPort, sqlDb);
 
 		this.con = DriverManager.getConnection(url, sqlUsername, sqlPassword);

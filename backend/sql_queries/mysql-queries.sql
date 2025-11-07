@@ -1,12 +1,15 @@
--- create schema expense_tracker;
--- use expense_tracker;
+-- drop in dependency-safe order
+drop trigger if exists set_expires_at;
+drop table if exists sessions;
+drop table if exists income;
+drop table if exists expenses;
+drop table if exists user_account;
 
 -- create user account table
-drop table if exists userAccount;
-create table if not exists userAccount(
-accountId int auto_increment primary key,
-firstName char(20) not null,
-lastName char(20) not null,
+create table if not exists user_account(
+account_id int auto_increment primary key,
+first_name char(20) not null,
+last_name char(20) not null,
 username char(20) unique not null,
 birthday Date not null,
 currency char(10) not null,
@@ -16,47 +19,43 @@ system_date datetime default current_timestamp not null
 );
 
 -- create income table
-drop table if exists income;
 create table if not exists income(
-accountId int not null,
-transactionId char(36) primary key,
+account_id int not null,
+transaction_id char(36) primary key,
 type char(10) not null,
 amount double not null,
 source char(50) not null,
 description varchar(100) not null,
 date date not null,
 system_date datetime default current_timestamp not null,
-foreign key (accountId) references userAccount(accountId)
+foreign key (account_id) references user_account(account_id)
 on update cascade on delete cascade
 );
 
 -- create expenses table
-drop table if exists expenses;
 create table if not exists expenses(
-accountId int not null,
-transactionId char(36) primary key,
+account_id int not null,
+transaction_id char(36) primary key,
 type char(10) not null,
 amount double not null,
 category char(50) not null,
 description varchar(100) not null,
 date date not null,
 system_date datetime default current_timestamp not null,
-foreign key (accountId) references userAccount(accountId)
+foreign key (account_id) references user_account(account_id)
 on update cascade on delete cascade
 );
 
 -- create sessions table
-drop table if exists sessions;
 create table if not exists sessions(
-sessionId char(36) primary key,
-accountId int not null,
+session_id char(36) primary key,
+account_id int not null,
 created_at datetime default current_timestamp not null,
 expires_at datetime,
-foreign key (accountId) references userAccount(accountId)
+foreign key (account_id) references user_account(account_id)
 );
 
 -- trigger for setting the value of expired_at on the sessions table
-drop trigger if exists set_expires_at;
 delimiter //
 create trigger set_expires_at
 before insert on sessions
@@ -69,7 +68,8 @@ end;
 //
 delimiter ;
 
-select * from userAccount;
+-- Sample selects
+select * from user_account;
 select * from income;
 select * from expenses;
 select * from sessions;

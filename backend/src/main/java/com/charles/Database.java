@@ -21,7 +21,7 @@ public class Database {
 		// MySQL
 		/*
 		 * Class.forName("com.mysql.cj.jdbc.Driver");
-		 * String sqlUsername = System.getenv("MYSQL_USERNAME");
+		 * String sqlUsername = System.getenv("MYSQL_USER");
 		 * String sqlPassword = System.getenv("MYSQL_PASSWORD");
 		 * String sqlHost = System.getenv("MYSQL_HOST");
 		 * String sqlPort = System.getenv("MYSQL_PORT");
@@ -42,7 +42,8 @@ public class Database {
 
 		// Render Managed Postgres typically requires SSL:
 		String url = String.format(
-				"jdbc:postgresql://%s:%s/%s?sslmode=require",
+				/* "jdbc:postgresql://%s:%s/%s?sslmode=require",*/ // Uncomment for Render deployment
+				 "jdbc:postgresql://%s:%s/%s?sslmode=disable",
 				sqlHost, sqlPort, sqlDb);
 
 		this.con = DriverManager.getConnection(url, sqlUsername, sqlPassword);
@@ -80,8 +81,8 @@ public class Database {
 
 		String sql;
 		switch (type) {
-			case "INCOME" -> sql = "SELECT * FROM income WHERE transactionId = ?";
-			case "EXPENSES" -> sql = "SELECT * FROM expenses WHERE transactionId = ?";
+			case "INCOME" -> sql = "SELECT * FROM income WHERE transaction_id = ?";
+			case "EXPENSES" -> sql = "SELECT * FROM expenses WHERE transaction_id = ?";
 			default -> {
 				System.out.println("Invalid Type: " + type);
 				return false;
@@ -104,8 +105,8 @@ public class Database {
 	public List<Transaction> fetchTransactions(int accountId) throws SQLException {
 		List<Transaction> transactions = new ArrayList<>();
 
-		String incomeSql = "SELECT * FROM income WHERE accountId = ?";
-		String expensesSql = "SELECT * FROM expenses WHERE accountId = ?";
+		String incomeSql = "SELECT * FROM income WHERE account_id = ?";
+		String expensesSql = "SELECT * FROM expenses WHERE account_id = ?";
 
 		try (
 				PreparedStatement incomeStmt = con.prepareStatement(incomeSql);
@@ -160,7 +161,7 @@ public class Database {
 				case "INCOME" -> {
 					source = source != null ? source.toUpperCase() : null;
 					description = description != null ? description.toUpperCase() : null;
-					String sql = "INSERT INTO income(accountId, transactionId, type, amount, source, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+					String sql = "INSERT INTO income(account_id, transaction_id, type, amount, source, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
 					try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 						pstmt.setInt(1, accountId);
 						pstmt.setString(2, transactionId);
@@ -176,7 +177,7 @@ public class Database {
 				case "EXPENSES" -> {
 					category = category != null ? category.toUpperCase() : null;
 					description = description != null ? description.toUpperCase() : null;
-					String sql = "INSERT INTO expenses(accountId, transactionId, type, amount, category, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+					String sql = "INSERT INTO expenses(account_id, transaction_id, type, amount, category, description, date) VALUES (?, ?, ?, ?, ?, ?, ?)";
 					try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 						pstmt.setInt(1, accountId);
 						pstmt.setString(2, transactionId);
@@ -209,9 +210,9 @@ public class Database {
 		if (verifyTransaction(transactionId, type)) {
 			switch (type) {
 				case "INCOME" ->
-					selectSql = "SELECT amount, source, description, date FROM income WHERE transactionId = ?";
+					selectSql = "SELECT amount, source, description, date FROM income WHERE transaction_id = ?";
 				case "EXPENSES" ->
-					selectSql = "SELECT amount, category, description, date FROM expenses WHERE transactionId = ?";
+					selectSql = "SELECT amount, category, description, date FROM expenses WHERE transaction_id = ?";
 				default -> {
 					System.out.println("Invalid Type: " + transaction.getType());
 					return false;
@@ -247,7 +248,7 @@ public class Database {
 							? transaction.getSource().toUpperCase()
 							: current.getSource();
 
-					String updateSql = "UPDATE income SET amount = ?, source = ?, description = ?, date = ? WHERE transactionId = ?";
+					String updateSql = "UPDATE income SET amount = ?, source = ?, description = ?, date = ? WHERE transaction_id = ?";
 					try (PreparedStatement updateStmt = con.prepareStatement(updateSql)) {
 						updateStmt.setDouble(1, amount);
 						updateStmt.setString(2, source);
@@ -262,7 +263,7 @@ public class Database {
 							? transaction.getCategory().toUpperCase()
 							: current.getCategory();
 
-					String updateSql = "UPDATE expenses SET amount = ?, category = ?, description = ?, date = ? WHERE transactionId = ?";
+					String updateSql = "UPDATE expenses SET amount = ?, category = ?, description = ?, date = ? WHERE transaction_id = ?";
 					try (PreparedStatement updateStmt = con.prepareStatement(updateSql)) {
 						updateStmt.setDouble(1, amount);
 						updateStmt.setString(2, category);
@@ -274,7 +275,7 @@ public class Database {
 					return true;
 				}
 			} else {
-				System.out.println("No current transaction found for transactionId: " + transactionId);
+				System.out.println("No current transaction found for transaction_id: " + transactionId);
 				return false;
 			}
 		}
@@ -290,8 +291,8 @@ public class Database {
 		if (verifyTransaction(transactionId, type)) {
 			String sql;
 			switch (type) {
-				case "INCOME" -> sql = "DELETE FROM income WHERE transactionId = ?";
-				case "EXPENSES" -> sql = "DELETE FROM expenses WHERE transactionId = ?";
+				case "INCOME" -> sql = "DELETE FROM income WHERE transaction_id = ?";
+				case "EXPENSES" -> sql = "DELETE FROM expenses WHERE transaction_id = ?";
 				default -> {
 					System.out.println("Invalid Type: " + transaction.getType());
 					return false;
@@ -309,7 +310,7 @@ public class Database {
 
 	// Verify user account in database
 	public boolean verifyUserAccount(int accountId) throws SQLException {
-		String sql = "SELECT * FROM user_account WHERE accountId = ?";
+		String sql = "SELECT * FROM user_account WHERE account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setInt(1, accountId);
 			try (ResultSet accountSelectQuery = pstmt.executeQuery()) {
@@ -341,7 +342,7 @@ public class Database {
 	// Get user account in database
 	public UserAccount getUserAccount(int accountId) throws SQLException {
 		UserAccount userAccount = null;
-		String sql = "SELECT * FROM user_account WHERE accountId = ?";
+		String sql = "SELECT * FROM user_account WHERE account_id = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setInt(1, accountId);
@@ -420,7 +421,7 @@ public class Database {
 		// Capitalize Currency
 		String capCurrency = currency.toUpperCase();
 
-		String sql = "INSERT INTO user_account(firstName, lastName, username, birthday, currency, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
+		String sql = "INSERT INTO user_account(first_name, last_name, username, birthday, currency, password, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, firstName);
 			pstmt.setString(2, lastName);
@@ -466,7 +467,7 @@ public class Database {
 					? userAccount.getEmail()
 					: current.getEmail();
 
-			String sql = "UPDATE user_account SET firstName = ?, lastName = ?, username = ?, birthday = ?, password = ?, email = ? WHERE accountId = ?";
+			String sql = "UPDATE user_account SET first_name = ?, last_name = ?, username = ?, birthday = ?, password = ?, email = ? WHERE account_id = ?";
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, firstName);
 				pstmt.setString(2, lastName);
@@ -489,7 +490,7 @@ public class Database {
 		if (verifyUserAccount(accountId)) {
 			boolean result = deleteSessions(accountId); // Remove all sessions first
 			if (result) {
-				String sql = "DELETE FROM user_account WHERE accountId = ?";
+				String sql = "DELETE FROM user_account WHERE account_id = ?";
 				try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 					pstmt.setInt(1, accountId);
 					pstmt.executeUpdate();
@@ -506,14 +507,14 @@ public class Database {
 		// Capitalize Currency
 		String capCurrency = newCurrency.toUpperCase();
 
-		String sql = "UPDATE user_account SET currency = ? WHERE accountId = ?";
+		String sql = "UPDATE user_account SET currency = ? WHERE account_id = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, capCurrency);
 				pstmt.setInt(2, accountId);
 				pstmt.executeUpdate();
 			}
-			System.out.println("Currency updated successfully for accountId: " + accountId);
+			System.out.println("Currency updated successfully for account_id: " + accountId);
 			return true;
 		}
 		System.out.println("User Account does not exist");
@@ -524,7 +525,7 @@ public class Database {
 		// Hash Password
 		String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
-		String sql = "UPDATE user_account SET password = ? WHERE accountId = ?";
+		String sql = "UPDATE user_account SET password = ? WHERE account_id = ?";
 		if (verifyUserAccount(accountId)) {
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, hashedPassword);
@@ -540,7 +541,7 @@ public class Database {
 
 	public boolean insertSession(String token, String sessionId, int accountId) throws SQLException {
 		if (verifyUserAccount(accountId)) {
-			String sql = "INSERT INTO sessions(sessionId, accountId, token) VALUES (?, ?, ?)";
+			String sql = "INSERT INTO sessions(session_id, account_id, token) VALUES (?, ?, ?)";
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 				pstmt.setString(1, sessionId);
 				pstmt.setInt(2, accountId);
@@ -556,7 +557,7 @@ public class Database {
 
 	// Helper: Delete all User sessions
 	public boolean deleteSessions(int accountId) throws SQLException {
-		String sql = "DELETE FROM sessions WHERE accountId = ?";
+		String sql = "DELETE FROM sessions WHERE account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setInt(1, accountId);
 			pstmt.executeUpdate();
@@ -566,7 +567,7 @@ public class Database {
 
 	// Helper: Delete user session
 	public boolean deleteSession(String token, int accountId) throws SQLException {
-		String sql = "DELETE FROM sessions WHERE token = ? AND accountId = ?";
+		String sql = "DELETE FROM sessions WHERE token = ? AND account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, token);
 			pstmt.setInt(2, accountId);

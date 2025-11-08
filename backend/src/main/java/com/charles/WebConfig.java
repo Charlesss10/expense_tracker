@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/**")
-            .allowedOrigins("http://localhost:3000")
+            .allowedOrigins("https://expense-tracker-git-dev-charles-s-team.vercel.app")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS");
     }
 }

@@ -22,7 +22,7 @@ public class Management implements UserInterface {
 	private final Settings settings;
 	private final DataStorage dataStorage;
 	private final Database database;
-	private final String TOKEN_FILE = "./expense_tracker/auth_token.txt";
+	private final String TOKEN_FILE = "./auth_token.txt";
 	Scanner choice = new Scanner(System.in);
 
 	public Management(UserAccountManager userAccountManager, AuthManager authManager,

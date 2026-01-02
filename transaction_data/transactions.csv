@@ -1,0 +1,21 @@
+Type,Amount,Category,Source,Description,Date
+Expenses,2000,Food,,,2025-12-30
+Income,5000,,Salary,,2025-12-15
+Expenses,1500,Transport,,,2025-01-05
+Income,3200,,Freelance,,2025-01-18
+Expenses,850.75,Utilities,,,2025-02-03
+Expenses,420,Entertainment,,,2025-02-14
+Income,4800,,Bonus,,2025-02-28
+Expenses,2300,Rent,,,2025-03-01
+Income,2500,,Investment,,2025-03-12
+Expenses,310.5,Internet,,,2025-03-25
+Expenses,1250,Healthcare,,,2025-04-04
+Income,4100,,Consulting,,2025-04-16
+Expenses,675,Groceries,,,2025-05-02
+Income,2950,,Freelance,,2025-05-19
+Expenses,980,Education,,,2025-06-07
+Income,5200,,Salary,,2025-06-21
+Expenses,145.99,Subscriptions,,,2025-07-03
+Income,1800,,Dividends,,2025-08-11
+Expenses,2600,Travel,,,2025-09-09
+Income,3500,,Side Hustle,,2025-10-17

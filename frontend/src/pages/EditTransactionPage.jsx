@@ -91,7 +91,7 @@ function EditTransactionPage({ accountId, onLogout }) {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setSuccess('Transaction updated successfully!');
-            setTimeout(() => navigate('/transactions/recent'), 1500);
+            setTimeout(() => navigate('/transactions'), 1500);
         } catch (err) {
             setError(err.response?.data || 'Failed to update transaction.');
         }

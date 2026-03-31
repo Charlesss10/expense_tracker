@@ -168,6 +168,50 @@
   margin-right: 0.5rem;
 }
 
+.login-loading-screen {
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.login-loader-box {
+  text-align: center;
+  padding: 2rem;
+  border: 1px solid #222;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 420px;
+  width: 100%;
+  background: #fff;
+}
+
+.login-loader-spinner {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1.5rem;
+  border: 6px solid rgba(0, 0, 0, 0.12);
+  border-top-color: #222;
+  border-radius: 50%;
+  animation: login-spinner-rotate 1s linear infinite;
+}
+
+.login-loader-message {
+  color: #222;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+}
+
+@keyframes login-spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Default: gray text for nav links and dropdown toggles */
 .navbar .nav-link,
 .navbar .nav-link.dropdown-toggle {

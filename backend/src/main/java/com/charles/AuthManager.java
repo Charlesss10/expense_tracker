@@ -1,6 +1,5 @@
 package com.charles;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -111,9 +110,18 @@ public class AuthManager {
     // Load Session Token
     public String loadSessionToken(String tokenFile) throws IOException {
         if (Files.exists(Paths.get(tokenFile))) {
-            return new String(Files.readAllBytes(Paths.get(tokenFile)));
+            token = new String(Files.readAllBytes(Paths.get(tokenFile))).trim();
+            return token.isEmpty() ? null : token;
         }
         return null;
+    }
+
+    private void deleteTokenFile(String tokenFile) {
+        try {
+            Files.deleteIfExists(Paths.get(tokenFile));
+        } catch (IOException e) {
+            System.out.println("Unable to delete token file: " + e.getMessage());
+        }
     }
 
     // Fetch all user accounts from the userAccountManager
@@ -138,14 +146,14 @@ public class AuthManager {
 
     // Validate Session Token
     public boolean isTokenValid(String token, int expectedAccountId) {
+        java.nio.file.Path tokenPath = Paths.get("auth_token.txt");
         try {
-            // Check if token exists in auth_token.txt
-            File tokenFile = new File("auth_token.txt");
-            if (!tokenFile.exists()) {
+            if (!Files.exists(tokenPath)) {
                 return false;
             }
-            String storedToken = Files.readString(tokenFile.toPath()).trim();
+            String storedToken = Files.readString(tokenPath).trim();
             if (!storedToken.equals(token)) {
+                deleteTokenFile(tokenPath.toString());
                 return false;
             }
             var claims = Jwts.parser()
@@ -155,9 +163,18 @@ public class AuthManager {
                     .getPayload();
 
             String subject = claims.getSubject();
-            return String.valueOf(expectedAccountId).equals(subject);
-        } catch (JwtException | IOException | IllegalArgumentException e) {
+            if (!String.valueOf(expectedAccountId).equals(subject)) {
+                deleteTokenFile(tokenPath.toString());
+                return false;
+            }
+            if (!userAccountManager.verifyUserAccount(expectedAccountId)) {
+                deleteTokenFile(tokenPath.toString());
+                return false;
+            }
+            return true;
+        } catch (JwtException | IOException | IllegalArgumentException | SQLException e) {
             System.out.println("Invalid or expired token.");
+            deleteTokenFile(tokenPath.toString());
             return false;
         }
     }
@@ -171,10 +188,8 @@ public class AuthManager {
     // Helper: Terminate Token
     public boolean terminateSession(String token, int accountId, String tokenFile) throws IOException, SQLException {
         boolean result = database.deleteSession(token, accountId);
-        boolean fileDeleted = Files.deleteIfExists(Paths.get(tokenFile));
-        // If session deleted in DB and token file deleted (or didn't exist), return
-        // true
-        return result == true && fileDeleted == true;
+        boolean fileDeleted = !Files.exists(Paths.get(tokenFile)) || Files.deleteIfExists(Paths.get(tokenFile));
+        return result && fileDeleted;
     }
 
     // Helper: Generate Session Token
@@ -189,9 +204,13 @@ public class AuthManager {
     // Helper: Save Session
     public boolean saveSession(String token, String sessionId, int accountId, String tokenFile)
             throws IOException, SQLException {
-        Files.write(Paths.get(tokenFile), token.getBytes());
         boolean result = database.insertSession(token, sessionId, accountId);
-        return result;
+        if (!result) {
+            deleteTokenFile(tokenFile);
+            return false;
+        }
+        Files.write(Paths.get(tokenFile), token.getBytes());
+        return true;
     }
 
     // Getters & Setters

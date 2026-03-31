@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -10,6 +10,12 @@ function LoginPage({ onLogin }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => setInitialLoading(false));
+        return () => cancelAnimationFrame(frame);
+    }, []);
 
     const navigate = useNavigate();
 
@@ -37,6 +43,19 @@ function LoginPage({ onLogin }) {
     const handleForgotPassword = () => {
         navigate('/reset-password');
     };
+
+    if (initialLoading) {
+        return (
+            <div className="page-container login-loading-screen">
+                <div className="login-loader-box">
+                    <div className="login-loader-spinner"></div>
+                    <p className="login-loader-message">
+                        Initial load may take a moment as the free-tier server wakes up
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="page-container">

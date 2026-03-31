@@ -34,16 +34,17 @@ public class Database {
 
 		// PostGres
 		Class.forName("org.postgresql.Driver");
-		String sqlUsername = System.getenv("PG_USER");
-		String sqlPassword = System.getenv("PG_PASSWORD");
-		String sqlHost = System.getenv("PG_HOST");
-		String sqlPort = System.getenv("PG_PORT");
-		String sqlDb = System.getenv("PG_DB");
+		// Remove the _PROD to test locally
+		String sqlUsername = System.getenv("PG_USER_PROD");
+		String sqlPassword = System.getenv("PG_PASSWORD_PROD");
+		String sqlHost = System.getenv("PG_HOST_PROD");
+		String sqlPort = System.getenv("PG_PORT_PROD");
+		String sqlDb = System.getenv("PG_DB_PROD");
 
 		// Render Managed Postgres typically requires SSL:
 		String url = String.format(
-				//"jdbc:postgresql://%s:%s/%s?sslmode=require", // Uncomment for Render deployment
-				 "jdbc:postgresql://%s:%s/%s?sslmode=disable",
+				"jdbc:postgresql://%s:%s/%s?sslmode=require", // Uncomment for Render deployment
+				 //"jdbc:postgresql://%s:%s/%s?sslmode=disable", // Uncomment for local deployment
 				sqlHost, sqlPort, sqlDb);
 
 		this.con = DriverManager.getConnection(url, sqlUsername, sqlPassword);

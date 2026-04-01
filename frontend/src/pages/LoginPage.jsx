@@ -35,7 +35,11 @@ function LoginPage({ onLogin }) {
                 setError('Invalid username or password.');
             }
         } catch (err) {
-            setError('Login failed. Please try again.');
+            if (axios.isAxiosError(err) && err.response) {
+                setError(`Login failed: ${err.response.status} ${err.response.data || ''}`);
+            } else {
+                setError('Login failed. Please try again.');
+            }
         }
         setLoading(false);
     };

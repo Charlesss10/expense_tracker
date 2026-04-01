@@ -576,4 +576,18 @@ public class Database {
 		}
 		return true;
 	}
+
+	public boolean isSessionValid(String token, int accountId) throws SQLException {
+		String sql = "SELECT COUNT(*) FROM sessions WHERE token = ? AND account_id = ?";
+		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+			pstmt.setString(1, token);
+			pstmt.setInt(2, accountId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1) > 0;
+				}
+			}
+		}
+		return false;
+	}
 }

@@ -146,35 +146,26 @@ public class AuthManager {
 
     // Validate Session Token
     public boolean isTokenValid(String token, int expectedAccountId) {
-        java.nio.file.Path tokenPath = Paths.get("auth_token.txt");
         try {
-            if (!Files.exists(tokenPath)) {
-                return false;
-            }
-            String storedToken = Files.readString(tokenPath).trim();
-            if (!storedToken.equals(token)) {
-                deleteTokenFile(tokenPath.toString());
-                return false;
-            }
             var claims = Jwts.parser()
                     .verifyWith(SIGNING_KEY)
                     .build()
-                    .parseSignedClaims(storedToken)
+                    .parseSignedClaims(token)
                     .getPayload();
 
             String subject = claims.getSubject();
             if (!String.valueOf(expectedAccountId).equals(subject)) {
-                deleteTokenFile(tokenPath.toString());
                 return false;
             }
             if (!userAccountManager.verifyUserAccount(expectedAccountId)) {
-                deleteTokenFile(tokenPath.toString());
+                return false;
+            }
+            if (!database.isSessionValid(token, expectedAccountId)) {
                 return false;
             }
             return true;
-        } catch (JwtException | IOException | IllegalArgumentException | SQLException e) {
+        } catch (JwtException | IllegalArgumentException | SQLException e) {
             System.out.println("Invalid or expired token.");
-            deleteTokenFile(tokenPath.toString());
             return false;
         }
     }

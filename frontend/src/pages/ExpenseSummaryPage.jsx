@@ -23,8 +23,18 @@ function ExpenseSummaryPage({ accountId, onLogout }) {
                         },
                     }
                 );
-                if (!res.ok) throw new Error(await res.text());
-                const data = await res.json();
+                const text = await res.text();
+                if (!res.ok) {
+                    try {
+                        const errorData = JSON.parse(text);
+                        setError(errorData.message || text || 'Failed to fetch expense summary.');
+                    } catch {
+                        setError(text || 'Failed to fetch expense summary.');
+                    }
+                    setLoading(false);
+                    return;
+                }
+                const data = text ? JSON.parse(text) : {};
                 setSummary(data);
                 setCurrency(data.currency || '');
             } catch (err) {
@@ -36,6 +46,7 @@ function ExpenseSummaryPage({ accountId, onLogout }) {
     }, [accountId]);
 
     function capitalizeCategory(cat) {
+        if (!cat) return 'N/A';
         return cat
             .toLowerCase()
             .replace(/(^|\s)\S/g, l => l.toUpperCase());
@@ -49,7 +60,12 @@ function ExpenseSummaryPage({ accountId, onLogout }) {
                 <hr className="mb-4" style={{ borderTop: '2px solid #222', width: '60%', margin: '0 auto' }} />
                 {loading && <div className="text-center">Loading...</div>}
                 {error && <div className="alert alert-danger text-center" style={{ borderRadius: 0 }}>{error}</div>}
-                {!loading && !error && summary && summary.expensesByCategory && (
+                {!loading && !error && summary && (!summary.expensesByCategory || Object.keys(summary.expensesByCategory).length === 0) && (
+                    <div className="alert alert-info text-center" style={{ borderRadius: 0 }}>
+                        No expenses recorded yet. Add transactions to see the summary.
+                    </div>
+                )}
+                {!loading && !error && summary && summary.expensesByCategory && Object.keys(summary.expensesByCategory).length > 0 && (
                     <div className="table-responsive">
                         <table className="table table-bordered table-striped">
                             <thead>

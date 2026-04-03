@@ -91,10 +91,13 @@ function App() {
   // Default route logic
   const isAuthenticated = token && accountId;
 
+  if (isBooting) {
+    return <BootingUpScreen timeLeft={bootTimeLeft} />;
+  }
+
   return (
     <Router>
       <div className="App">
-        {isBooting && <BootingUpScreen timeLeft={bootTimeLeft} />}
         <Routes>
           <Route
             path="/"

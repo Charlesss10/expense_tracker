@@ -10,6 +10,7 @@ function TotalBalancePage({ accountId, onLogout }) {
     const [currency, setCurrency] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [status, setStatus] = useState('Checking backend status...');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -30,16 +31,24 @@ function TotalBalancePage({ accountId, onLogout }) {
                 setIncome(data.totalIncome);
                 setExpenses(data.totalExpenses);
                 setCurrency(data.currency);
+                setStatus('Data loaded successfully.');
                 setLoading(false);
             } catch (err) {
-                setError('Failed to fetch balance.');
+                setStatus('Backend is starting or connection is being established. Waiting...');
+                setError('Failed to fetch balance. Please wait and try again.');
                 setLoading(false);
             }
         }
         fetchBalance();
     }, [accountId, onLogout]);
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div>;
+    if (loading) return (
+        <div className="text-center mt-5">
+            <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>
+            <p className="mt-3" style={{ color: '#333', fontWeight: 600 }}>{status}</p>
+            <p style={{ color: '#555' }}>If the page stays here, the backend may still be initializing (Render can take ~2 minutes after idle).</p>
+        </div>
+    );
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
 
     return (

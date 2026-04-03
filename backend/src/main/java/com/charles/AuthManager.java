@@ -42,8 +42,7 @@ public class AuthManager {
             if (userAccount.getUsername().equals(username)) {
                 if (BCrypt.checkpw(password, userAccount.getPassword())) {
                     // Generate and return session token
-                    // Invalidate any existing session for this account
-                    database.deleteSessions(userAccount.getAccountId());
+                    // Keep existing sessions to support multiple device login
 
                     this.setAccountInfo(userAccount.getAccountId(), userAccount.getEmail());
                     token = generateSessionToken(userAccount.getAccountId());

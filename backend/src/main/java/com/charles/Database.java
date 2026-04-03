@@ -14,10 +14,16 @@ import org.mindrot.jbcrypt.BCrypt;
 //Singleton database
 public class Database {
 	private static Database instance;
-	private final Connection con;
+	private Connection con;
+
+	private static final int DB_VALID_TIMEOUT = 2;
+	private static final int DB_RETRY_DELAY_MS = 2000;
+	private static final int DB_MAX_RETRIES = 3;
 
 	// Create database connection
 	private Database() throws ClassNotFoundException, SQLException {
+		initConnection();
+
 		// MySQL
 		/*
 		 * Class.forName("com.mysql.cj.jdbc.Driver");
@@ -32,23 +38,66 @@ public class Database {
 		 * );
 		 */
 
-		// PostGres
+		// Postgres connection is initialized in initConnection().
+	}
+
+	private void initConnection() throws ClassNotFoundException, SQLException {
 		Class.forName("org.postgresql.Driver");
-		// Remove the _PROD to test locally
 		String sqlUsername = System.getenv("PG_USER_PROD");
 		String sqlPassword = System.getenv("PG_PASSWORD_PROD");
 		String sqlHost = System.getenv("PG_HOST_PROD");
 		String sqlPort = System.getenv("PG_PORT_PROD");
 		String sqlDb = System.getenv("PG_DB_PROD");
 
-		// Render Managed Postgres typically requires SSL:
 		String url = String.format(
-				"jdbc:postgresql://%s:%s/%s?sslmode=require", // Uncomment for Render deployment
-				 //"jdbc:postgresql://%s:%s/%s?sslmode=disable", // Uncomment for local deployment
-				sqlHost, sqlPort, sqlDb);
+				"jdbc:postgresql://%s:%s/%s?sslmode=require",
+			sqlHost, sqlPort, sqlDb);
 
 		this.con = DriverManager.getConnection(url, sqlUsername, sqlPassword);
 		System.out.println("Database connection created successfully to: " + sqlHost + ":" + sqlPort + "/" + sqlDb);
+	}
+
+	private void ensureConnection() throws SQLException {
+		boolean needsReconnect = false;
+		if (con == null) {
+			needsReconnect = true;
+		} else {
+			try {
+				if (!con.isValid(DB_VALID_TIMEOUT)) {
+					needsReconnect = true;
+				}
+			} catch (SQLException e) {
+				needsReconnect = true;
+			}
+		}
+
+		if (!needsReconnect) {
+			return;
+		}
+
+		for (int attempt = 1; attempt <= DB_MAX_RETRIES; attempt++) {
+			try {
+				if (con != null && !con.isClosed()) {
+					try {
+						con.close();
+					} catch (SQLException ignore) {
+					}
+				}
+				initConnection();
+				return;
+			} catch (ClassNotFoundException | SQLException e) {
+				System.out.println("Database connect attempt " + attempt + " failed: " + e.getMessage());
+				if (attempt == DB_MAX_RETRIES) {
+					throw new SQLException("Unable to establish database connection after " + DB_MAX_RETRIES + " attempts", e);
+				}
+				try {
+					Thread.sleep(DB_RETRY_DELAY_MS);
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					throw new SQLException("Thread interrupted while retrying DB connection", ie);
+				}
+			}
+		}
 	}
 
 	// Static access point
@@ -73,6 +122,7 @@ public class Database {
 
 	// Verify transaction from database
 	public boolean verifyTransaction(String transactionId, String type) throws SQLException {
+		ensureConnection();
 		// Validate transaction type
 		if (!type.equalsIgnoreCase("INCOME") && !type.equalsIgnoreCase("EXPENSES")) {
 			System.out.println("Invalid type: " + type);
@@ -104,6 +154,7 @@ public class Database {
 
 	// Fetch all transactions
 	public List<Transaction> fetchTransactions(int accountId) throws SQLException {
+		ensureConnection();
 		List<Transaction> transactions = new ArrayList<>();
 
 		String incomeSql = "SELECT * FROM income WHERE account_id = ?";
@@ -149,6 +200,7 @@ public class Database {
 
 	// Insert transaction into database
 	public boolean insertTransaction(Transaction transaction, int accountId) throws SQLException {
+		ensureConnection();
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
 		double amount = transaction.getAmount();
@@ -202,6 +254,7 @@ public class Database {
 
 	// Update transaction in database
 	public boolean updateTransaction(Transaction transaction) throws SQLException {
+		ensureConnection();
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
 
@@ -286,6 +339,7 @@ public class Database {
 
 	// Delete transaction in database
 	public boolean deleteTransaction(Transaction transaction) throws SQLException {
+		ensureConnection();
 		String transactionId = transaction.getTransactionId();
 		String type = transaction.getType();
 
@@ -311,6 +365,7 @@ public class Database {
 
 	// Verify user account in database
 	public boolean verifyUserAccount(int accountId) throws SQLException {
+		ensureConnection();
 		String sql = "SELECT * FROM user_account WHERE account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setInt(1, accountId);
@@ -326,6 +381,7 @@ public class Database {
 
 	// Verify User account by username in database
 	public boolean verifyAccountByUsername(String username) throws SQLException {
+		ensureConnection();
 		String sql = "SELECT * FROM user_account WHERE username = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, username);
@@ -342,6 +398,7 @@ public class Database {
 
 	// Get user account in database
 	public UserAccount getUserAccount(int accountId) throws SQLException {
+		ensureConnection();
 		UserAccount userAccount = null;
 		String sql = "SELECT * FROM user_account WHERE account_id = ?";
 		if (verifyUserAccount(accountId)) {
@@ -376,6 +433,7 @@ public class Database {
 
 	// Fetch all user accounts
 	public List<UserAccount> fetchUserAccounts() throws SQLException {
+		ensureConnection();
 		List<UserAccount> userAccounts = new ArrayList<>();
 		String sql = "SELECT * FROM user_account";
 		try (PreparedStatement pstmt = con.prepareStatement(sql);
@@ -408,6 +466,7 @@ public class Database {
 
 	// Insert user account into database
 	public boolean insertAccount(UserAccount userAccount) throws SQLException {
+		ensureConnection();
 		String firstName = userAccount.getFirstName();
 		String lastName = userAccount.getLastName();
 		String username = userAccount.getUsername();
@@ -439,6 +498,7 @@ public class Database {
 
 	// Update user account in database
 	public boolean updateAccount(UserAccount userAccount) throws SQLException {
+		ensureConnection();
 		int accountId = userAccount.getAccountId();
 
 		// Fetch current user account from DB
@@ -488,6 +548,7 @@ public class Database {
 
 	// Delete user account in database
 	public boolean deleteUserAccount(int accountId) throws SQLException {
+		ensureConnection();
 		if (verifyUserAccount(accountId)) {
 			boolean result = deleteSessions(accountId); // Remove all sessions first
 			if (result) {
@@ -505,6 +566,7 @@ public class Database {
 	}
 
 	public boolean updateAccountCurrency(int accountId, String newCurrency) throws SQLException {
+		ensureConnection();
 		// Capitalize Currency
 		String capCurrency = newCurrency.toUpperCase();
 
@@ -523,6 +585,7 @@ public class Database {
 	}
 
 	public boolean updateAccountPassword(int accountId, String password) throws SQLException {
+		ensureConnection();
 		// Hash Password
 		String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
 
@@ -541,6 +604,7 @@ public class Database {
 	}
 
 	public boolean insertSession(String token, String sessionId, int accountId) throws SQLException {
+		ensureConnection();
 		if (verifyUserAccount(accountId)) {
 			String sql = "INSERT INTO sessions(session_id, account_id, token) VALUES (?, ?, ?)";
 			try (PreparedStatement pstmt = con.prepareStatement(sql)) {
@@ -558,6 +622,7 @@ public class Database {
 
 	// Helper: Delete all User sessions
 	public boolean deleteSessions(int accountId) throws SQLException {
+		ensureConnection();
 		String sql = "DELETE FROM sessions WHERE account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setInt(1, accountId);
@@ -568,6 +633,7 @@ public class Database {
 
 	// Helper: Delete user session
 	public boolean deleteSession(String token, int accountId) throws SQLException {
+		ensureConnection();
 		String sql = "DELETE FROM sessions WHERE token = ? AND account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, token);
@@ -578,6 +644,7 @@ public class Database {
 	}
 
 	public boolean isSessionValid(String token, int accountId) throws SQLException {
+		ensureConnection();
 		String sql = "SELECT COUNT(*) FROM sessions WHERE token = ? AND account_id = ?";
 		try (PreparedStatement pstmt = con.prepareStatement(sql)) {
 			pstmt.setString(1, token);

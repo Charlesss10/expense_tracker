@@ -14,7 +14,6 @@ function ExpenseSummaryPage({ accountId, onLogout }) {
             setError('');
             try {
                 const token = localStorage.getItem('token');
-                console.log(token);
                 const res = await fetch(
                     `${API_BASE_URL}/api/expenses/summary?accountId=${accountId}`,
                     {

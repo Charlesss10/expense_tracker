@@ -23,26 +23,11 @@ public class Database {
 	// Create database connection
 	private Database() throws ClassNotFoundException, SQLException {
 		initConnection();
-
-		// MySQL
-		/*
-		 * Class.forName("com.mysql.cj.jdbc.Driver");
-		 * String sqlUsername = System.getenv("MYSQL_USER");
-		 * String sqlPassword = System.getenv("MYSQL_PASSWORD");
-		 * String sqlHost = System.getenv("MYSQL_HOST");
-		 * String sqlPort = System.getenv("MYSQL_PORT");
-		 * String sqlDb = System.getenv("MYSQL_DB");
-		 * String url = String.format(
-		 * "jdbc:mysql://%s:%s/%s?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC",
-		 * sqlHost, sqlPort, sqlDb
-		 * );
-		 */
-
-		// Postgres connection is initialized in initConnection().
 	}
 
 	private void initConnection() throws ClassNotFoundException, SQLException {
 		Class.forName("org.postgresql.Driver");
+		// Remove _PROD to test locally
 		String sqlUsername = System.getenv("PG_USER_PROD");
 		String sqlPassword = System.getenv("PG_PASSWORD_PROD");
 		String sqlHost = System.getenv("PG_HOST_PROD");

@@ -49,3 +49,7 @@ npm start
 
 ## Contributing
 Contributions are welcome! Please feel free to fork the repository, open issues, or submit pull requests.
+
+## Notes
+- You cannot log into 2 devices simultaneously
+- Retry logic implemented for Neo database

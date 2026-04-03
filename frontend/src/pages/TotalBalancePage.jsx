@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header.jsx';
-import API_BASE_URL from '../config.js';
+import { apiFetch } from '../api.js';
 
 function TotalBalancePage({ accountId, onLogout }) {
     const [balance, setBalance] = useState(null);
@@ -14,31 +14,17 @@ function TotalBalancePage({ accountId, onLogout }) {
 
     useEffect(() => {
         async function fetchBalance() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Authentication error.');
-                setLoading(false);
-                return;
-            }
             try {
-                const res = await fetch(
-                    `${API_BASE_URL}/api/transactions/balance?accountId=${accountId}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-                if (res.status === 401) {
-                    // Unauthorized: token is invalid or expired
-                    onLogout();
-                    return;
-                }
+                const res = await apiFetch('/api/transactions/balance', {
+                    method: 'GET',
+                });
+
                 if (!res.ok) {
                     setError('Failed to fetch balance.');
                     setLoading(false);
                     return;
                 }
+
                 const data = await res.json();
                 setBalance(data.totalBalance);
                 setIncome(data.totalIncome);

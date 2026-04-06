@@ -12,6 +12,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
             .allowedOrigins(
                 "https://expense-tracker-git-dev-charles-s-team.vercel.app",
+                "https://expense-tracker-git-main-charles-s-team.vercel.app/",
                 "http://localhost:3000"
             )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")

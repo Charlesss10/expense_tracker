@@ -58,7 +58,7 @@ function Header({ onLogout }) {
             {/* Mobile Header */}
             <div
                 className="d-flex d-md-none align-items-center justify-content-between px-3 py-2"
-                style={{ padding: '1rem', maxWidth: '1000px', margin: 'auto', marginBottom: '14px' }}
+                style={{ padding: '1.5rem', maxWidth: '1200px', margin: 'auto', marginBottom: '1rem' }}
             >
                 {/* Logo aligned left */}
                 <div style={{ cursor: 'pointer' }} onClick={() => {
@@ -69,7 +69,7 @@ function Header({ onLogout }) {
                         navigate('/balance');
                     }
                 }}>
-                    <img src="/logo.png" alt="Logo" style={{ height: 70 }} />
+                    <img src="/logo.png" alt="Logo" style={{ height: 80 }} />
                 </div>
                 {/* Hamburger */}
                 <button
@@ -127,7 +127,7 @@ function Header({ onLogout }) {
                 </div>
             </div>
             {/* Desktop Header */}
-            <div className="d-none d-md-flex flex-column flex-md-row justify-content-center align-items-center mb-3" style={{ padding: '1rem', maxWidth: '1000px', margin: 'auto' }}>
+            <div className="d-none d-md-flex flex-column flex-md-row justify-content-center align-items-center mb-4" style={{ padding: '1.5rem', maxWidth: '1200px', margin: 'auto' }}>
                 {/* Logo */}
                 <div className="logo-bar me-3" style={{ cursor: 'pointer' }} onClick={() => {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -217,8 +217,8 @@ function Header({ onLogout }) {
                 </nav>
                 {/* Logout Button for desktop only */}
                 <button
-                    className="btn btn-dark ms-3 d-none d-md-block"
-                    style={{ borderRadius: 0 }}
+                    className="btn ms-3 d-none d-md-block"
+                    style={{ borderRadius: 8, background: '#dc2626', border: 'none', color: 'white', fontWeight: 600, padding: '0.5rem 1.5rem', transition: 'background 0.2s' }}
                     onClick={onLogout}
                 >
                     Logout

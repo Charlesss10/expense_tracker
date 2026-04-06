@@ -89,7 +89,7 @@ function AddTransactionPage({ accountId, onLogout }) {
                 <h2 className="mb-4 text-center">Add Transaction</h2>
                 <hr className="mb-5" style={{ borderTop: '2px solid #222', width: '60%', margin: '0 auto' }} />
                 <div className="row justify-content-center">
-                    <div className="col-12 col-md-8 col-lg-6">
+                    <div className="col-12 col-md-20 col-lg-12">
                         <form onSubmit={handleSubmit}>
                             <div className="mb-3">
                                 <label className="form-label">Amount</label>

@@ -28,11 +28,11 @@ public class Database {
 	private void initConnection() throws ClassNotFoundException, SQLException {
 		Class.forName("org.postgresql.Driver");
 		// Remove _PROD to test locally
-		String sqlUsername = System.getenv("PG_USER_PROD");
-		String sqlPassword = System.getenv("PG_PASSWORD_PROD");
-		String sqlHost = System.getenv("PG_HOST_PROD");
-		String sqlPort = System.getenv("PG_PORT_PROD");
-		String sqlDb = System.getenv("PG_DB_PROD");
+		String sqlUsername = System.getenv("PG_USER_DEV");
+		String sqlPassword = System.getenv("PG_PASSWORD_DEV");
+		String sqlHost = System.getenv("PG_HOST_DEV");
+		String sqlPort = System.getenv("PG_PORT_DEV");
+		String sqlDb = System.getenv("PG_DB_DEV");
 
 		String url = String.format(
 				"jdbc:postgresql://%s:%s/%s?sslmode=require",

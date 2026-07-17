@@ -16,7 +16,6 @@ import EditTransactionPage from './pages/EditTransactionPage.jsx';
 import ExpenseSummaryPage from './pages/ExpenseSummaryPage.jsx';
 import TransactionHistoryPage from './pages/TransactionHistoryPage.jsx';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Footer from './components/Footer.jsx';
 
 // Global function to trigger booting screen
 window.triggerBootingScreen = null;
@@ -205,7 +204,6 @@ function App() {
             }
           />
         </Routes>
-        <Footer />
       </div>
     </Router>
   );
